@@ -29,6 +29,7 @@ $(GEN)/assets.c $(GEN)/assets.h: $(ASSET_SRC)
 sprites:
 	python3 tools/compose_player.py
 	python3 tools/compose_fx.py
+	python3 tools/compose_boss.py
 
 $(BUILD)/%.o: src/%.c $(GEN)/assets.h src/game.h include/gba.h
 	@mkdir -p $(BUILD)

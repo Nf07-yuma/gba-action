@@ -139,6 +139,21 @@ def gate(frame):
     return p
 
 
+def shockwave(frame):
+    """地を這う衝撃波 16x16"""
+    p = canvas(16, 16)
+    for y in range(4, 16):
+        for x in range(16):
+            h = 12 - abs(x - 8) * (1.4 if frame == 0 else 1.1)
+            top = 16 - h
+            if y >= top:
+                d = y - top
+                p[y][x] = I["W"] if d < 1.5 else (I["y"] if d < 4 else I["o"])
+                if (x + y + frame) % 3 == 0 and d >= 4:
+                    p[y][x] = I["r"]
+    return p
+
+
 def main():
     S = {}
     # 斬撃 (32x32, プレイヤー前方に置く。右向き基準)
@@ -158,6 +173,8 @@ def main():
         S[f"dust{i}"] = dust(i)
     for i in range(2):
         S[f"gate{i}"] = gate(i)
+    for i in range(2):
+        S[f"wave{i}"] = shockwave(i)
     out = ["# 自動生成: tools/compose_fx.py"]
     for name, p in S.items():
         out.append(f"@{name} {len(p[0])} {len(p)}")

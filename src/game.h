@@ -6,7 +6,7 @@
 #include "assets.h"
 
 #define FP 8
-#define TO_FP(x)   ((s32)(x) << FP)
+#define TO_FP(x)   ((s32)(x) * (1 << FP))
 #define FROM_FP(x) ((s32)(x) >> FP)
 #define CELL 16
 #define SCREEN_W 240
@@ -137,6 +137,19 @@ void items_clear(void);
 void items_update(void);
 void items_draw(void);
 
+/* ---- boss.c ---- */
+extern s32 boss_lock_x;
+void boss_reset(void);
+int boss_check_start(int spawn_cx, int spawn_cy);
+void boss_update(void);
+void boss_draw(void);
+void boss_hud(void);
+int boss_active(void);
+int boss_hp(void);
+int boss_state_id(void);
+int boss_x(void);
+void wave_fire(s32 x, s32 y, s32 vx);
+
 /* ---- fx.c ---- */
 enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH };
 void fx_clear(void);
@@ -169,6 +182,7 @@ void game_add_score(u32 pts);
 void game_set_checkpoint(s32 x, s32 y);
 void game_stage_clear(void);
 void game_on_player_dead(void);
+void game_boss_defeated(int x, int y);
 void hud_draw(int force);
 
 /* ---- sound.c ---- */
@@ -200,6 +214,11 @@ typedef struct {
     u32 level_w, level_h;
     s32 vy;
     u32 on_ground;
+    s32 boss_hp;
+    u32 boss_state;
+    s32 boss_x;
+    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg) */
+    u32 cmd_arg;
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

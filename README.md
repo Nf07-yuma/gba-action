@@ -25,6 +25,7 @@
 - **3 段コンボ**: 横薙ぎ → 斬り上げ → 叩きつけ。3 段目は盾持ちの敵のガードも砕く
 - **攻撃キャンセル**: 攻撃後の硬直はジャンプ・ダッシュでキャンセル可能
 - **弾消し**: 斬撃で敵弾をかき消せる（CHAIN も伸びる）
+- **ボス戦**: 工場の守護ロボ GUARDIAN。突進を壁に誘導すると気絶して大チャンス
 
 ## ビルド方法
 
@@ -43,6 +44,7 @@ mGBA のコアライブラリを使い、ROM を画面なしで実行して自�
 sudo apt-get install libmgba-dev zlib1g-dev
 make test                                        # スモークテスト (build/test-out/*.png)
 build/runner steel_chain.gba build/bot-out bot   # ボットによる通しプレイ
+build/runner steel_chain.gba build/boss-out boss # ボス戦へ直行してボット戦術で撃破を検証
 ```
 
 ROM は EWRAM 先頭 (`0x02000000`) にデバッグ情報ブロック（状態・座標・HP・スコア等）を置いており、

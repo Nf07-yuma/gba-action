@@ -31,6 +31,9 @@ jobs:
       - name: スモークテスト (mGBA コアで自動操作)
         run: make test
 
+      - name: ボス戦テスト (ボット戦術で撃破できるか)
+        run: build/runner steel_chain.gba build/boss-out boss
+
       - name: ボット通しプレイ (到達度レポート)
         run: build/runner steel_chain.gba build/bot-out bot | tee build/bot-report.txt
 
@@ -44,6 +47,7 @@ jobs:
             build/test-out/*.png
             build/test-out/*.wav
             build/bot-out/*.png
+            build/boss-out/*.png
             build/bot-report.txt
           if-no-files-found: warn
 

@@ -174,6 +174,7 @@ static void camera_clamp(void) {
     int maxy = level.px_h - SCREEN_H;
     if (maxy < 0) maxy = 0;
     cam_x = CLAMP(cam_x, 0, maxx);
+    if (boss_lock_x >= 0 && cam_x < boss_lock_x) cam_x = boss_lock_x;
     cam_y = CLAMP(cam_y, 0, maxy);
 }
 

@@ -83,6 +83,12 @@ void game_stage_clear(void) {
     music_stop();
 }
 
+void game_boss_defeated(int x, int y) {
+    (void)x;
+    (void)y;
+    game_stage_clear();
+}
+
 void game_on_player_dead(void) {
     game.deaths++;
     set_state(GS_DEAD);
@@ -101,6 +107,7 @@ static void stage_begin(int respawn) {
     }
     bullets_clear();
     fx_clear();
+    boss_reset();
     player_init(game.checkpoint_x - 5, game.checkpoint_y - 24);
     game.chain = 0;
     game.chain_t = 0;
@@ -116,6 +123,7 @@ static void draw_world(void) {
     fx_draw();
     bullets_draw();
     enemies_draw();
+    boss_draw();
 }
 
 /* --------------------------------------------------------------- 各画面 */
@@ -184,6 +192,7 @@ static void world_step(void) {
         player_update();
         enemies_spawn_check();
         enemies_update();
+        boss_update();
         bullets_update();
     }
     fx_update();
@@ -316,9 +325,24 @@ int main(void) {
         vsync();
         oam_end();
         hud_draw(0);
+        if (game.state == GS_PLAY || game.state == GS_DEAD || game.state == GS_PAUSE) boss_hud();
         sound_update();
         input_update();
         game.frame++;
+        /* テスト用命令 */
+        if (g_debug.cmd == 1 && game.state != GS_STAGE_INTRO) {
+            game.stage = (u8)g_debug.cmd_arg;
+            if (game.lives <= 0) game.lives = 3;
+            set_state(GS_STAGE_INTRO);
+            g_debug.cmd = 0;
+        } else if (g_debug.cmd == 2 && game.state == GS_PLAY) {
+            player.b.x = TO_FP(g_debug.cmd_arg);
+            player.b.y = TO_FP((level.h - 5) * CELL);
+            player.b.vy = 0;
+            camera_snap(g_debug.cmd_arg, 80);
+            level_force_redraw();
+            g_debug.cmd = 0;
+        }
         game.state_t++;
         switch (game.state) {
         case GS_TITLE: title_update(); break;
@@ -349,5 +373,8 @@ int main(void) {
         g_debug.level_h = (u32)level.h;
         g_debug.vy = player.b.vy;
         g_debug.on_ground = player.b.on_ground;
+        g_debug.boss_hp = boss_hp();
+        g_debug.boss_state = (u32)boss_state_id();
+        g_debug.boss_x = boss_x();
     }
 }

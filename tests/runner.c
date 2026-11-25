@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdarg.h>
 #include <sys/stat.h>
 
@@ -44,6 +45,10 @@ typedef struct {
     uint32_t level_cells, level_w, level_h;
     int32_t vy;
     uint32_t on_ground;
+    int32_t boss_hp;
+    uint32_t boss_state;
+    int32_t boss_x;
+    uint32_t cmd, cmd_arg;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -210,11 +215,50 @@ static int cell_at(const DebugInfo* d, int cx, int cy) {
 #define C_HAZARD 3
 
 static int bot_jump_hold;
+enum { BS_NONE, BS_INTRO, BS_IDLE, BS_SHOOT, BS_CHARGE, BS_STUN, BS_JUMP, BS_DEAD };
+
+/* ボス戦の戦術: 突進は飛び越し、着地の衝撃波はジャンプで避け、気絶中に連撃 */
+static uint32_t boss_keys(const DebugInfo* d, const DebugInfo* prev, int t) {
+    int pcx = d->px + 5;
+    int dx = d->boss_x - pcx;
+    int adx = dx < 0 ? -dx : dx;
+    uint32_t toward = dx > 0 ? KRIGHT : KLEFT;
+    uint32_t away = dx > 0 ? KLEFT : KRIGHT;
+    uint32_t keys = 0;
+    switch (d->boss_state) {
+    case BS_CHARGE:
+        /* 近づいてきたら飛び越す */
+        keys = away;
+        if (adx < 90 && d->on_ground && bot_jump_hold == 0) bot_jump_hold = 24;
+        if (!d->on_ground) keys = toward;
+        break;
+    case BS_JUMP:
+        keys = away;
+        break;
+    case BS_STUN:
+        keys = adx > 26 ? toward : 0;
+        if (t % 6 < 2) keys |= KB;
+        break;
+    default:
+        if (prev->boss_state == BS_JUMP && d->boss_state == BS_IDLE && bot_jump_hold == 0) bot_jump_hold = 24; /* 衝撃波 */
+        keys = adx > 30 ? toward : 0;
+        if (adx < 22) keys = away;
+        if (adx < 48 && t % 6 < 2) keys |= KB;
+        break;
+    }
+    if (bot_jump_hold > 0) {
+        bot_jump_hold--;
+        if (bot_jump_hold < 23) keys |= KA;
+    }
+    return keys;
+}
 static void bot_step(int t, DebugInfo* prev, int* stuck) {
     DebugInfo d;
     read_debug(&d);
     uint32_t keys = 0;
-    if (d.state == GS_PLAY) {
+    if (d.state == GS_PLAY && d.boss_hp > 0 && d.boss_state != BS_INTRO) {
+        keys = boss_keys(&d, prev, t);
+    } else if (d.state == GS_PLAY) {
         keys |= KRIGHT;
         if (d.px == prev->px) (*stuck)++;
         else *stuck = 0;
@@ -357,6 +401,41 @@ int main(int argc, char** argv) {
         print_debug("after bot");
         read_debug(&d);
         check(d.kills > 0 || d.score > 0, "敵を倒せる/スコアが入る");
+    } else if (strcmp(scenario, "boss") == 0) {
+        /* ステージ3末尾のボス戦へ直行し、ボスの出現・攻撃・被弾を検証 */
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 2);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
+        run(130, 0);
+        read_debug(&d);
+        check(d.state == GS_PLAY && d.stage == 2, "ステージ3へ移動できる");
+        int arena_x = d.level_w * 16 - 240;
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), arena_x + 40);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
+        run(60, KRIGHT);
+        read_debug(&d);
+        check(d.boss_hp > 0, "闘技場でボスが出現する");
+        screenshot("boss_01_intro");
+        run(120, 0);
+        screenshot("boss_02_fight");
+        int hp0 = d.boss_hp;
+        /* ボット戦術でボスと戦う */
+        DebugInfo prev = d;
+        int stuck = 0;
+        int min_hp = 99;
+        for (int t = 0; t < 5400; t++) {
+            read_debug(&d);
+            if (d.boss_hp > 0 && d.boss_hp < min_hp) min_hp = d.boss_hp;
+            if (t == 600) screenshot("boss_03_mid");
+            if (d.state == GS_CLEAR || d.state == GS_ENDING) break;
+            bot_step(t, &prev, &stuck);
+        }
+        (void)prev;
+        read_debug(&d);
+        print_debug("boss end");
+        printf("  ボス残りHP: %d (最小 %d / 開始 %d)\n", d.boss_hp, min_hp, hp0);
+        check(min_hp < hp0 || d.state == GS_CLEAR || d.state == GS_ENDING, "ボスにダメージを与えられる");
+        check(d.state == GS_CLEAR || d.state == GS_ENDING, "ボット戦術でボスを撃破できる (攻略可能性の検証)");
+        screenshot("boss_04_end");
     } else {
         DebugInfo prev = d;
         int stuck = 0;

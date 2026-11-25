@@ -544,10 +544,20 @@ def gen_hud_tiles():
     rect(p, 2, 3, 5, 3, 3)
     rect(p, 1, 7, 6, 7, 1)
     t["life_icon"] = p
+    # ボス HP ゲージ
+    p = blank(8, 8, 0)
+    rect(p, 0, 2, 7, 5, 1)
+    rect(p, 0, 3, 7, 4, 5)
+    rect(p, 0, 3, 7, 3, 10)
+    t["boss_full"] = p
+    p = blank(8, 8, 0)
+    rect(p, 0, 2, 7, 5, 1)
+    rect(p, 0, 3, 7, 4, 12)
+    t["boss_empty"] = p
     return t
 
 
-HUD_TILE_ORDER = ["hp_full", "hp_empty", "hp_low", "hp_label", "solid_dark", "panel", "life_icon"]
+HUD_TILE_ORDER = ["hp_full", "hp_empty", "hp_low", "hp_label", "solid_dark", "panel", "life_icon", "boss_full", "boss_empty"]
 
 # ---------------------------------------------------------------------------
 # ステージ
@@ -744,7 +754,7 @@ def main():
 
     # ---- スプライト
     sprites = []
-    for fn in ("sprites_player.txt", "sprites_fx.txt", "sprites.txt"):
+    for fn in ("sprites_player.txt", "sprites_fx.txt", "sprites.txt", "sprites_boss.txt"):
         sprites += load_sprites(os.path.join(ASSETS, fn))
     H.append("typedef struct { const u32* data; u16 tiles; u8 w, h; } SpriteFrame;")
     H.append("enum {")
