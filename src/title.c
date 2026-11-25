@@ -48,6 +48,7 @@ static void demo_start(void) {
     game.lives = 1;
     game.score = 0;
     game.easy = 0;
+    game.hard = 0;
     demo_jump = 0;
     game_set_state(GS_STAGE_INTRO);
 }
@@ -101,7 +102,11 @@ void title_update(void) {
     }
     /* 難易度選択 (左右で切り替え) */
     if (key_hit(KEY_LEFT | KEY_RIGHT | KEY_SELECT)) {
-        game.easy ^= 1;
+        /* 0=EASY 1=NORMAL 2=HARD: 左で易しく、右/SELECT で難しく (端で折り返し) */
+        int d = game.easy ? 0 : game.hard ? 2 : 1;
+        d = (d + (key_hit(KEY_LEFT) ? 2 : 1)) % 3;
+        game.easy = (u8)(d == 0);
+        game.hard = (u8)(d == 2);
         sfx_play(SFX_SELECT);
     }
     /* ステージセレクト (到達済みステージまで, 上下で選択) */
@@ -111,7 +116,8 @@ void title_update(void) {
         sfx_play(SFX_SELECT);
     }
     if (t > 1) {
-        text_put_center(10, game.easy ? "<  EASY   >" : "<  NORMAL >", game.easy ? BGPAL_HUD_C : BGPAL_HUD);
+        text_put_center(10, game.easy ? "<  EASY   >" : game.hard ? "<  HARD   >" : "<  NORMAL >",
+                        game.easy ? BGPAL_HUD_C : game.hard ? BGPAL_HUD_Y : BGPAL_HUD);
         if (save_reached > 0) {
             char buf[16] = "STAGE 1  ^v";
             buf[6] = (char)('1' + title_cursor);
