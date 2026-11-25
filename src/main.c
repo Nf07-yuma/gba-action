@@ -6,7 +6,6 @@ static u8 loading_frame; /* マップ全再描画などの読み込みフレー�
 __attribute__((section(".ewram_debug"))) volatile DebugInfo g_debug;
 
 static u32 stage_start_score;
-static int title_cursor;
 
 /* ---------------------------------------------------------------- HUD */
 static u16 hud_last_hp = 0xFFFF, hud_last_lives = 0xFFFF, hud_last_chain = 0xFFFF;
@@ -71,7 +70,7 @@ void game_set_checkpoint(s32 x, s32 y) {
     game.checkpoint_y = y;
 }
 
-static void set_state(int s) {
+void game_set_state(int s) {
     game.state = (u8)s;
     game.state_t = 0;
 }
@@ -80,7 +79,7 @@ void game_stage_clear(void) {
     if (game.state != GS_PLAY) return;
     player.state = PS_CLEAR;
     player.state_t = 0;
-    set_state(GS_CLEAR);
+    game_set_state(GS_CLEAR);
     sfx_play(SFX_CHECK);
     music_play(SONG_CLEAR);
 }
@@ -93,7 +92,7 @@ void game_boss_defeated(int x, int y) {
 
 void game_on_player_dead(void) {
     game.deaths++;
-    set_state(GS_DEAD);
+    game_set_state(GS_DEAD);
 }
 
 /* --------------------------------------------------------- ステージ開始 */
@@ -129,118 +128,6 @@ static void draw_world(void) {
     bullets_draw();
     enemies_draw();
     boss_draw();
-}
-
-/* --------------------------------------------------------------- 各画面 */
-static void title_enter(void) {
-    game.demo = 0;
-    set_state(GS_TITLE);
-    REG_BGVOFS(BG_HUD) = 0;
-    bg_dim = 0;
-    dma3_copy32(PAL_BG, &theme_pals[0], 16);
-    dma3_copy32(PAL_BG + BGPAL_MID * 16, &theme_mid_pals[0], 8);
-    REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
-    text_clear();
-    cam_x = 0;
-    cam_y = 0;
-    title_cursor = 0;
-    music_play(SONG_TITLE);
-}
-
-/* ---- デモプレイ (アトラクトモード) ---- */
-#define DEMO_IDLE 1200  /* タイトルで 20 秒放置で開始 */
-#define DEMO_LEN  1500  /* 25 秒で終了 */
-static u16 demo_jump;
-static u16 demo_prev_ai;
-
-/* デモ用の簡易 AI: 右へ走って斬り、穴や壁の手前で跳ぶ */
-static u16 demo_keys(void) {
-    u16 k = KEY_RIGHT;
-    if ((game.frame % 14) < 2) k |= KEY_B;
-    int feet = FROM_FP(player.b.y) + player.b.h;
-    int fx = FROM_FP(player.b.x) + player.b.w + 4;
-    if (player.b.on_ground && !demo_jump) {
-        int below = level_cell(fx >> 4, (feet + 2) >> 4);
-        int wall = level_solid((fx + 2) >> 4, (feet - 4) >> 4) || level_solid((fx + 2) >> 4, (feet - 20) >> 4);
-        if ((below != CELL_SOLID && below != CELL_ONEWAY) || wall) demo_jump = 22;
-    }
-    if (demo_jump) {
-        demo_jump--;
-        if (demo_jump < 21) k |= KEY_A;
-    }
-    return k;
-}
-
-static void demo_start(void) {
-    game.demo = 1;
-    game.stage = 0;
-    game.lives = 1;
-    game.score = 0;
-    game.easy = 0;
-    demo_jump = 0;
-    set_state(GS_STAGE_INTRO);
-}
-
-static void title_update(void) {
-    u32 t = game.state_t;
-    if (t > DEMO_IDLE) {
-        demo_start();
-        return;
-    }
-    REG_BGHOFS(BG_SKY) = (u16)(t >> 2);
-    REG_BGVOFS(BG_SKY) = 96;
-    REG_BGHOFS(BG_MID) = (u16)(t >> 1);
-    REG_BGVOFS(BG_MID) = 96;
-    if (t == 1) {
-        text_clear();
-        u16* m = SCREENBLOCK(SBB_HUD);
-        for (int y = 0; y < 6; y++)
-            for (int x = 0; x < 30; x++) m[(y + 1) * 32 + x] = logo_map[y * 30 + x];
-        text_put_center(8, "- ROBOT BLADE ACTION -", BGPAL_HUD_C);
-        if (save_hiscore) {
-            text_put(1, 15, "HI", BGPAL_HUD_C);
-            text_num(4, 15, save_hiscore, 7, BGPAL_HUD);
-            text_put(13, 15, "CHAIN", BGPAL_HUD_C);
-            text_num(19, 15, save_best_chain, 3, BGPAL_HUD);
-            if (save_cleared) text_put(23, 15, "* CLEAR", BGPAL_HUD_Y);
-        }
-        text_put_center(17, "B:SLASH  A:JUMP  R:DASH", BGPAL_HUD_C);
-        text_put_center(19, "(C) 2026 STEEL CHAIN PROJECT", BGPAL_HUD);
-    }
-    /* 難易度選択 (左右で切り替え) */
-    if (key_hit(KEY_LEFT | KEY_RIGHT | KEY_SELECT)) {
-        game.easy ^= 1;
-        sfx_play(SFX_SELECT);
-    }
-    /* ステージセレクト (到達済みステージまで, 上下で選択) */
-    if (save_reached > 0 && key_hit(KEY_UP | KEY_DOWN)) {
-        int n = save_reached + 1;
-        title_cursor = (title_cursor + (key_hit(KEY_UP) ? 1 : n - 1)) % n;
-        sfx_play(SFX_SELECT);
-    }
-    if (t > 1) {
-        text_put_center(10, game.easy ? "<  EASY   >" : "<  NORMAL >", game.easy ? BGPAL_HUD_C : BGPAL_HUD);
-        if (save_reached > 0) {
-            char buf[16] = "STAGE 1  ^v";
-            buf[6] = (char)('1' + title_cursor);
-            text_put_center(11, buf, title_cursor ? BGPAL_HUD_Y : BGPAL_HUD);
-        }
-        text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
-    }
-    oam_begin();
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 28, 74, 0, OBJPAL_NORMAL, 0);
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 180, 74, 1, OBJPAL_GHOST, 0);
-    if (t > 20 && key_hit(KEY_START | KEY_A)) {
-        sfx_play(SFX_SELECT);
-        game.stage = (u8)title_cursor;
-        game.lives = START_LIVES;
-        game.score = 0;
-        game.kills = 0;
-        game.deaths = 0;
-        game.chain_best = 0;
-        game.total_time = 0;
-        set_state(GS_STAGE_INTRO);
-    }
 }
 
 /* ステージ開始時の司令部からの通信 (各 2 行, 28 文字以内) */
@@ -295,16 +182,8 @@ static void intro_update(void) {
     draw_world();
     if (game.state_t > INTRO_LEN || (game.state_t > 20 && key_hit(KEY_START))) {
         for (int y = 7; y < 19; y++) text_put(0, y, "                              ", BGPAL_HUD);
-        set_state(GS_PLAY);
+        game_set_state(GS_PLAY);
     }
-}
-
-/* mm:ss 形式で時間を表示 */
-static void text_time(int x, int y, u32 frames, int pal) {
-    u32 sec = frames / 60;
-    text_num(x, y, MIN(99u, sec / 60), 2, pal);
-    text_put(x + 2, y, ":", pal);
-    text_num(x + 3, y, sec % 60, 2, pal);
 }
 
 static void world_step(void) {
@@ -343,7 +222,7 @@ static void pause_menu_clear(void) {
 
 static void play_update(void) {
     if (key_hit(KEY_START)) {
-        set_state(GS_PAUSE);
+        game_set_state(GS_PAUSE);
         pause_cursor = 0;
         pause_menu_draw();
         sfx_play(SFX_SELECT);
@@ -367,11 +246,11 @@ static void pause_update(void) {
         sfx_play(SFX_SELECT);
         if (pause_cursor == 0) {
             music_pause(0);
-            set_state(GS_PLAY);
+            game_set_state(GS_PLAY);
         } else if (pause_cursor == 1) {
             /* ステージ最初からやり直し (スコアはステージ開始時に戻す) */
             game.score = stage_start_score;
-            set_state(GS_STAGE_INTRO);
+            game_set_state(GS_STAGE_INTRO);
         } else {
             save_record(game.score, game.chain_best, 0);
             title_enter();
@@ -386,9 +265,9 @@ static void dead_update(void) {
         if (game.lives > 0) {
             game.lives--;
             stage_begin(1);
-            set_state(GS_PLAY);
+            game_set_state(GS_PLAY);
         } else {
-            set_state(GS_GAMEOVER);
+            game_set_state(GS_GAMEOVER);
         }
     }
 }
@@ -425,9 +304,9 @@ static void clear_update(void) {
     if (t > 220 || (t > 100 && key_hit(KEY_START | KEY_A))) {
         if (game.stage + 1 < LEVEL_COUNT) {
             game.stage++;
-            set_state(GS_STAGE_INTRO);
+            game_set_state(GS_STAGE_INTRO);
         } else {
-            set_state(GS_ENDING);
+            game_set_state(GS_ENDING);
         }
     }
 }
@@ -445,133 +324,51 @@ static void gameover_update(void) {
     if (game.state_t > 30 && key_hit(KEY_START | KEY_A)) {
         game.lives = START_LIVES;
         game.score = stage_start_score / 2;
-        set_state(GS_STAGE_INTRO);
+        game_set_state(GS_STAGE_INTRO);
     } else if (game.state_t > 30 && key_hit(KEY_SELECT)) {
         title_enter();
     }
 }
 
-/* ---- スタッフロール: BG0 を縦スクロールし、行を 32 行のリングに書き足していく ---- */
-typedef struct { const char* s; u8 pal; s8 spr; } RollLine;
-#define RL(s, p) {s, p, -1}
-#define RS(spr) {0, 0, spr}
-#define RB {"", 0, -1}
-static const RollLine roll_lines[] = {
-    RL("STEEL CHAIN", BGPAL_HUD_Y), RB, RB, RB, RB,
-    RL("- STAFF -", BGPAL_HUD_C), RB, RB,
-    RL("ORIGINAL CONCEPT", BGPAL_HUD_C), RL("THE PLAYER", BGPAL_HUD), RB, RB,
-    RL("PROGRAM / GRAPHICS", BGPAL_HUD_C), RL("SOUND / LEVEL DESIGN", BGPAL_HUD_C), RL("CLAUDE CODE", BGPAL_HUD), RB, RB,
-    RL("TESTING", BGPAL_HUD_C), RL("AUTO-PLAY BOT", BGPAL_HUD), RL("HEADLESS MGBA", BGPAL_HUD), RB, RB, RB, RB,
-    RL("- CAST -", BGPAL_HUD_C), RB, RB,
-    RS(SPR_PLAYER_RUN0), RB, RB, RB, RL("STEEL", BGPAL_HUD), RB, RB,
-    RS(SPR_CRAWLER0), RB, RB, RL("CRAWLER", BGPAL_HUD), RB, RB,
-    RS(SPR_DRONE0), RB, RB, RL("DRONE", BGPAL_HUD), RB, RB,
-    RS(SPR_TURRET0), RB, RB, RL("TURRET", BGPAL_HUD), RB, RB,
-    RS(SPR_JUMPER0), RB, RB, RL("JUMPER", BGPAL_HUD), RB, RB,
-    RS(SPR_SHIELD0), RB, RB, RB, RL("SHIELD GUARD", BGPAL_HUD), RB, RB,
-    RS(SPR_MINE0), RB, RB, RL("FLOAT MINE", BGPAL_HUD), RB, RB,
-    RS(SPR_LASER0), RB, RB, RL("LASER TURRET", BGPAL_HUD), RB, RB, RB,
-    RS(SPR_BOSS_IDLE0), RB, RB, RB, RB, RB, RB, RB, RB, RL("GUARDIAN", BGPAL_HUD_Y), RB, RB, RB, RB, RB, RB, RB, RB, RB, RB, RB, RB, RB, RB,
-    RS(SPR_CORE_OPEN), RB, RB, RB, RB, RB, RB, RB, RB, RL("OVERLORD CORE", BGPAL_HUD_Y), RB, RB, RB, RB, RB, RB, RB,
-    RL("AND YOU", BGPAL_HUD_C), RB, RB, RB, RB, RB, RB, RB,
-};
-#define ROLL_COUNT ((int)(sizeof(roll_lines) / sizeof(roll_lines[0])))
-#define ROLL_END   (ROLL_COUNT * 8)  /* 全行が画面上に抜けるスクロール量 (px) */
-static u8 ending_phase;   /* 0=リザルト, 1=スタッフロール, 2=THE END */
-static u16 roll_y;
-static s16 roll_written;
-
-static void roll_begin(void) {
-    ending_phase = 1;
-    roll_y = 0;
-    roll_written = -1;
-    text_clear();
-    REG_BGVOFS(BG_HUD) = 0;
-}
-
-/* スクロール量に合わせて、これから画面下に入る行を書き込む */
-static void roll_write_lines(void) {
-    while (roll_written + 1 < ROLL_COUNT && (roll_written + 1) * 8 <= roll_y + 8) {
-        int v = ++roll_written;
-        int row = (20 + v) & 31;
-        text_fill(0, row, 32, 1, 0, 0);
-        if (roll_lines[v].s && roll_lines[v].s[0]) text_put_center(row, roll_lines[v].s, roll_lines[v].pal);
-    }
-}
-
-static void roll_draw_sprites(u32 t) {
-    for (int v = 0; v <= roll_written; v++) {
-        int spr = roll_lines[v].spr;
-        if (spr < 0) continue;
-        int y = (20 + v) * 8 - roll_y;
-        if (y <= -64 || y >= SCREEN_H) continue;
-        /* 2 コマのアニメ (ボス/コアは 1 コマ) */
-        if (spr == SPR_PLAYER_RUN0) spr += (int)((t >> 3) % 6);
-        else if (spr == SPR_BOSS_IDLE0) spr += (int)((t >> 4) & 1);
-        else if (spr != SPR_CORE_OPEN) spr += (int)((t >> 4) & 1);
-        if (spr == SPR_BOSS_IDLE0 || spr == SPR_BOSS_IDLE1 || spr == SPR_CORE_OPEN) sprite_request_dynamic(spr);
-        const SpriteFrame* f = &sprite_frames[spr];
-        oam_put(spr, 120 - f->w / 2, y, 0, OBJPAL_NORMAL, 0);
-    }
-}
-
-static void ending_update(void) {
-    u32 t = game.state_t;
-    g_debug.ending_phase = ending_phase;
-    if (t == 1) {
-        ending_phase = 0;
-        bg_dim = 0;
-        REG_BGVOFS(BG_HUD) = 0;
-        REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
-        text_clear();
-        music_play(SONG_TITLE);
-        text_put_center(3, "MISSION COMPLETE", BGPAL_HUD_Y);
-        if (save_record(game.score, game.chain_best, 1)) text_put_center(17, "NEW RECORD!", BGPAL_HUD_Y);
-        text_put_center(6, "THE CORE IS SILENT.", BGPAL_HUD);
-        text_put_center(7, "STEEL RETURNS HOME.", BGPAL_HUD);
-        text_put(6, 9, "SCORE", BGPAL_HUD_C);
-        text_num(17, 9, game.score, 7, BGPAL_HUD);
-        text_put(6, 11, "BEST CHAIN", BGPAL_HUD_C);
-        text_num(21, 11, game.chain_best, 3, BGPAL_HUD);
-        text_put(6, 13, "DESTROYED", BGPAL_HUD_C);
-        text_num(21, 13, game.kills, 3, BGPAL_HUD);
-        text_put(6, 15, "TOTAL TIME", BGPAL_HUD_C);
-        text_time(19, 15, game.total_time, BGPAL_HUD);
-        text_put_center(19, "THANK YOU FOR PLAYING", BGPAL_HUD_Y);
-    }
-    REG_BGHOFS(BG_SKY) = (u16)(t >> 2);
-    REG_BGHOFS(BG_MID) = (u16)(t >> 1);
-    oam_begin();
-    if (ending_phase == 0) {
-        oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 8, 76, 0, OBJPAL_NORMAL, 0);
-        /* START か 10 秒経過でスタッフロールへ */
-        if ((t > 120 && key_hit(KEY_START | KEY_A)) || t > 600) roll_begin();
-        return;
-    }
-    if (ending_phase == 1) {
-        /* 1 フレーム 0.5px。A を押している間は 4 倍速 */
-        if (bg_dim < 8 && !(t & 3)) bg_dim++;  /* じわっと暗くする */
-        int step = key_down(KEY_A) ? 2 : (t & 1);
-        roll_y = (u16)(roll_y + step);
-        roll_write_lines();
-        REG_BGVOFS(BG_HUD) = (u16)(roll_y & 255);
-        roll_draw_sprites(t);
-        if (roll_y >= ROLL_END || key_hit(KEY_START)) {
-            ending_phase = 2;
-            game.state_t = 1;
-            text_clear();
-            REG_BGVOFS(BG_HUD) = 0;
-            text_put_center(7, "THE END", BGPAL_HUD_Y);
-            text_put_center(16, "PRESS START", BGPAL_HUD_C);
-        }
-        return;
-    }
-    /* THE END */
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 112, 80, 0, OBJPAL_NORMAL, 0);
-    if (t > 60 && key_hit(KEY_START)) title_enter();
-}
-
 /* --------------------------------------------------------------- main */
+/* テスト用デバッグ情報 (EWRAM 先頭の DebugInfo) を更新 */
+static void debug_publish(void) {
+    g_debug.frame = game.frame;
+    g_debug.state = game.state;
+    g_debug.stage = game.stage;
+    g_debug.px = FROM_FP(player.b.x);
+    g_debug.py = FROM_FP(player.b.y);
+    g_debug.hp = player.hp;
+    g_debug.lives = game.lives;
+    g_debug.score = game.score;
+    g_debug.kills = game.kills;
+    g_debug.deaths = game.deaths;
+    g_debug.chain_best = game.chain_best;
+    g_debug.enemies = (u32)enemies_alive();
+    g_debug.cam_x = (u32)cam_x;
+    g_debug.level_cells = level.def ? (u32)level.def->cells : 0;
+    g_debug.level_w = (u32)level.w;
+    g_debug.level_h = (u32)level.h;
+    g_debug.vy = player.b.vy;
+    g_debug.on_ground = player.b.on_ground;
+    g_debug.boss_hp = boss_hp();
+    {
+        int n = 0, a, b, c, d2;
+        u8 id;
+        for (int k = 0; k < MAX_PWAVE; k++) n += player_wave_box(k, &a, &b, &c, &d2, &id);
+        g_debug.pwaves = (u32)n;
+        g_debug.charge = player.charge;
+    }
+    g_debug.boss_state = (u32)boss_state_id();
+    g_debug.boss_x = boss_x();
+    {
+        s32 xy[8];
+        int n = lifts_debug(xy, 4);
+        g_debug.lift_count = (u32)n;
+        for (int i = 0; i < 8; i++) g_debug.lifts[i] = i < n * 2 ? xy[i] : 0;
+    }
+}
+
 static volatile u32 vblank_count;
 static void on_irq(u32 flags) {
     if (flags & IRQ_VBLANK) vblank_count++;
@@ -614,32 +411,13 @@ int main(void) {
         if (game.state == GS_PLAY || game.state == GS_DEAD || game.state == GS_PAUSE) boss_hud();
         sound_update();
         input_update();
-        if (game.demo) {
-            /* 実際のボタンが押されたらデモを終えてタイトルへ。それ以外は AI の入力に置き換え */
-            static u16 demo_prev;
-            u16 real = key_cur;
-            if (real & ~demo_prev & KEY_MASK) {
-                key_cur = key_prev = 0;
-                title_enter();
-            } else if (game.state == GS_PLAY && game.state_t > DEMO_LEN) {
-                title_enter();
-            } else if ((game.state == GS_DEAD && game.state_t > 60) || game.state == GS_GAMEOVER || game.state == GS_CLEAR) {
-                title_enter();
-            } else {
-                key_prev = demo_prev_ai;
-                key_cur = demo_keys();
-                demo_prev_ai = key_cur;
-            }
-            demo_prev = real;
-            if (game.demo && (game.frame & 32)) text_put_center(2, "DEMO PLAY", BGPAL_HUD_Y);
-            else if (game.demo) text_put_center(2, "         ", BGPAL_HUD);
-        }
+        if (game.demo) demo_input();
         game.frame++;
         /* テスト用命令 */
         if (g_debug.cmd == 1 && game.state != GS_STAGE_INTRO) {
             game.stage = (u8)g_debug.cmd_arg;
             if (game.lives <= 0) game.lives = START_LIVES;
-            set_state(GS_STAGE_INTRO);
+            game_set_state(GS_STAGE_INTRO);
             g_debug.cmd = 0;
         } else if (g_debug.cmd == 4) {
             music_stop();
@@ -668,40 +446,6 @@ int main(void) {
         case GS_GAMEOVER: gameover_update(); break;
         case GS_ENDING: ending_update(); break;
         }
-        /* テスト用デバッグ情報 */
-        g_debug.frame = game.frame;
-        g_debug.state = game.state;
-        g_debug.stage = game.stage;
-        g_debug.px = FROM_FP(player.b.x);
-        g_debug.py = FROM_FP(player.b.y);
-        g_debug.hp = player.hp;
-        g_debug.lives = game.lives;
-        g_debug.score = game.score;
-        g_debug.kills = game.kills;
-        g_debug.deaths = game.deaths;
-        g_debug.chain_best = game.chain_best;
-        g_debug.enemies = (u32)enemies_alive();
-        g_debug.cam_x = (u32)cam_x;
-        g_debug.level_cells = level.def ? (u32)level.def->cells : 0;
-        g_debug.level_w = (u32)level.w;
-        g_debug.level_h = (u32)level.h;
-        g_debug.vy = player.b.vy;
-        g_debug.on_ground = player.b.on_ground;
-        g_debug.boss_hp = boss_hp();
-        {
-            int n = 0, a, b, c, d2;
-            u8 id;
-            for (int k = 0; k < MAX_PWAVE; k++) n += player_wave_box(k, &a, &b, &c, &d2, &id);
-            g_debug.pwaves = (u32)n;
-            g_debug.charge = player.charge;
-        }
-        g_debug.boss_state = (u32)boss_state_id();
-        g_debug.boss_x = boss_x();
-        {
-            s32 xy[8];
-            int n = lifts_debug(xy, 4);
-            g_debug.lift_count = (u32)n;
-            for (int i = 0; i < 8; i++) g_debug.lifts[i] = i < n * 2 ? xy[i] : 0;
-        }
+        debug_publish();
     }
 }

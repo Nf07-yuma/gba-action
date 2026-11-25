@@ -151,3 +151,11 @@ void text_fill(int x, int y, int w, int h, int tile, int pal) {
     for (int j = y; j < y + h; j++)
         for (int i = x; i < x + w; i++) m[j * 32 + i] = (u16)(tile | (pal << 12));
 }
+
+/* mm:ss 形式で時間を表示 */
+void text_time(int x, int y, u32 frames, int pal) {
+    u32 sec = frames / 60;
+    text_num(x, y, MIN(99u, sec / 60), 2, pal);
+    text_put(x + 2, y, ":", pal);
+    text_num(x + 3, y, sec % 60, 2, pal);
+}
