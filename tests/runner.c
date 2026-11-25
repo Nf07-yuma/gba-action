@@ -58,6 +58,7 @@ typedef struct {
     uint32_t ending_phase;
     uint32_t popups;
     uint32_t rank, rank_hist;
+    uint32_t ambient;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -643,6 +644,8 @@ int main(int argc, char** argv) {
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
         run(50, 0);
         screenshot(scenario);
+        read_debug(&d);
+        printf("  環境演出の粒: %u\n", d.ambient);
         for (int k = 0; k < 4; k++) {
             run(40, 0);
             char nm[80];
@@ -714,6 +717,9 @@ int main(int argc, char** argv) {
             for (int i = 0; i < 4; i++) cl |= (uint32_t)core->busRead8(core, 0x0E00000C + i) << (i * 8);
             uint32_t saved = (cl >> (16 + st * 3)) & 7;
             check(saved == (d.rank & 3) + 1, "ステージの最高ランクが SRAM に保存される");
+            /* リセットすると計測値が消えるので、先に処理落ちを確認しておく */
+            printf("  処理負荷 (リセット前): 最大 %u / 228 走査線, 処理落ち %u フレーム\n", d.max_lines, d.lag_frames);
+            check(d.lag_frames == 0, "このステージで処理落ちが発生していない");
             /* リセット後のタイトルにステージの最高ランクが出る */
             core->reset(core);
             run(120, 0);

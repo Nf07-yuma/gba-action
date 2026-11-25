@@ -249,7 +249,10 @@ static void world_step(void) {
         boss_update();
         bullets_update();
     }
-    if (!slow_skip) fx_update();
+    if (!slow_skip) {
+        fx_ambient();
+        fx_update();
+    }
     if (game.chain_t && --game.chain_t == 0) game.chain = 0;
     camera_update(FROM_FP(player.b.x) + player.b.w / 2, FROM_FP(player.b.y) + player.b.h / 2, player.dir);
     level_scroll_update();

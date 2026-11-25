@@ -177,7 +177,8 @@ int boss_x(void);
 void wave_fire(s32 x, s32 y, s32 vx);
 
 /* ---- fx.c ---- */
-enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH, FX_DEBRIS };
+enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH, FX_DEBRIS, FX_AMBIENT };
+void fx_ambient(void);
 void fx_debris(int x, int y, int n);
 void screen_flash(int frames);
 void fx_flash_apply(void);
@@ -289,6 +290,7 @@ typedef struct {
     u32 popups;       /* CHAIN の節目ポップアップを出した回数 */
     u32 rank;         /* 直近のステージランク 0=C 1=B 2=A 3=S */
     u32 rank_hist;    /* ステージごとのランク+1 (4bit x 5) */
+    u32 ambient;      /* 環境演出の粒の数 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

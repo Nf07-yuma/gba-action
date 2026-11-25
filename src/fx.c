@@ -52,6 +52,37 @@ void fx_debris(int x, int y, int n) {
     }
 }
 
+/* ステージの空気感: 鋳造所は舞い上がる火の粉、データハイウェイは降るデータ片、中枢コアは漂う光の粒 */
+void fx_ambient(void) {
+    int kind = level.index == 2 ? 1 : level.index == 3 ? 2 : level.index == 4 ? 3 : 0;
+    if (!kind || (game.frame % 10) != 0) return;
+    /* 戦闘用のエフェクト枠を圧迫しないよう、同時 6 個まで & 空きが少ないときは出さない */
+    int amb = 0, used = 0;
+    for (int i = 0; i < MAX_FX; i++) {
+        if (!fxs[i].active) continue;
+        used++;
+        if (fxs[i].type == FX_AMBIENT) amb++;
+    }
+    g_debug.ambient = (u32)amb;
+    if (amb >= 6 || used > MAX_FX - 10) return;
+    Fx* f = fx_alloc();
+    if (!f) return;
+    f->active = 1;
+    f->type = FX_AMBIENT;
+    f->t = (u8)rng_range(32);
+    f->flip = (u8)kind;
+    f->x = TO_FP(cam_x + rng_range(SCREEN_W));
+    if (kind == 2) { /* 上から降る */
+        f->y = TO_FP(cam_y - 8);
+        f->vx = 0;
+        f->vy = (s16)(0x140 + rng_range(0xC0));
+    } else { /* 下から昇る */
+        f->y = TO_FP(cam_y + SCREEN_H);
+        f->vx = (s16)(kind == 1 ? 0x30 : 0);
+        f->vy = (s16)(-0x80 - rng_range(0x80));
+    }
+}
+
 /* 画面を一瞬白くする (BLDY による輝度上昇) */
 void screen_flash(int frames) {
     if (frames > flash_t) flash_t = (u8)frames;
@@ -67,6 +98,7 @@ void fx_update(void) {
         case FX_BOOM: life = 20; break;
         case FX_SPARK: life = 8; break;
         case FX_DEBRIS: life = 50; break;
+        case FX_AMBIENT: life = 150; break;
         default: life = 14; break;
         }
         if (f->type == FX_DUST && (f->t & 3) == 0) f->y -= TO_FP(1);
@@ -81,6 +113,11 @@ void fx_update(void) {
                 f->vy = (s16)(-f->vy / 2);
                 f->vx = (s16)(f->vx / 2);
             }
+        }
+        if (f->type == FX_AMBIENT) {
+            /* ゆらゆら横に揺れながら上昇/落下 */
+            f->x += f->vx + ((f->t & 32) ? 0x20 : -0x20);
+            f->y += f->vy;
         }
         if (f->t >= life) f->active = 0;
     }
@@ -119,6 +156,12 @@ void fx_draw(void) {
             if (f->t > 40 && (f->t & 2)) break;
             oam_put(SPR_DEBRIS0 + ((f->t >> 2) & 1), sx, sy, f->flip, OBJPAL_NORMAL, 1);
             break;
+        case FX_AMBIENT: {
+            /* 地形 (BG1) と同じ優先度: 屋内ステージでは背景タイルが全面を覆うため */
+            int base = f->flip == 1 ? SPR_EMBER0 : f->flip == 2 ? SPR_DATABIT0 : SPR_MOTE0;
+            oam_put(base + ((f->t >> 3) & 1), sx, sy, 0, OBJPAL_NORMAL, 2);
+            break;
+        }
         }
     }
 }
