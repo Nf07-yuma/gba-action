@@ -196,6 +196,10 @@ typedef struct {
     u32 enemies;
     u32 cam_x;
     u32 clears;
+    u32 level_cells; /* ステージセル配列のアドレス (ボット用) */
+    u32 level_w, level_h;
+    s32 vy;
+    u32 on_ground;
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

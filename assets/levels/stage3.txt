@@ -1,0 +1,14 @@
+;name=SECTOR 3  CORE FOUNDRY
+;theme=2
+|##########################################################################################################################################################################################################################|
+|##########################################################################################################################################################################################################################|
+|gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg########################gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg|
+|gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg########################gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggwwwwwgggggg|
+|bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbwwbbwwbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbpppppbbbbbb|
+|gggggggggbwwbgggggggggggggggggggggggggggggggggggggggggggggggggggggggdggggggggggggggggg+gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg+ggggggggggggdggggggggggggggggggggggggggggggggggggpppppgggggg|
+|ggggggggggggggggggggggggggggggggggggggggggggggggjggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggpppppgggggg|
+|gggggggggggggggggggggggggggggggggggggggg====ggg====ggg====ggggggtggggggggtgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggtgggggggdggggggggggggggggggggggggggggggggggggggtggggggggggggggggggpppppgggggg|
+|bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb###bbbbbb###bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb##bbbbbb##bbbbbb##bbbbbbbb====bbbb====bbbbbbbbb###bbbbbbbbbbbbbbbbbpppppbbbbbb|
+|ggggPgggggggggggggggggggsggggggcggggggggggggggggggggggggggggggg###gggggg###ggggggsgggggsgggggcgggggggggggCgggggggggggggjggggggjggggggjgggggg##gggggg##gggggg##gggggsgggggggcggggggggsgggggg###ggggsggggjgggggggppGppgggggg|
+|#######################################^^^^^^^^^^^^^^^^^^############################################################################################################^^^#####^^^^#########################################|
+|#######################################^^^^^^^^^^^^^^^^^^############################################################################################################^^^#####^^^^#########################################|

@@ -286,22 +286,19 @@ def gen_metatiles():
         rect(p, x, 3, x, 6, 4)
     mt["girder"] = p
 
-    # トゲ(電撃床)
+    # トゲ(電撃床): セル上端近くまで届く鋭い突起
     p = blank(16, 16, 0)
     for i in range(4):
         cx = i * 4
-        for y in range(8, 16):
-            half = (y - 8) // 4
+        for y in range(2, 14):
+            half = (y - 2) // 6
             for x in range(cx + 1 - half, cx + 3 + half):
                 if 0 <= x < 16:
-                    p[y][x] = 5 if x <= cx + 1 else 3
-        p[8][cx + 1] = 6
-        p[8][cx + 2] = 6
-    rect(p, 0, 14, 15, 15, 2)
+                    p[y][x] = 6 if y < 4 else (5 if x <= cx + 1 else 3)
     rect(p, 0, 13, 15, 13, 11)
-    for x in range(1, 16, 4):
-        p[7][x] = 10
-        p[6][x] = 9
+    rect(p, 0, 14, 15, 15, 2)
+    for x in range(0, 16, 4):
+        p[12][x] = 12
     mt["spikes"] = p
 
     # 奥の壁 (通過可能, 装飾)
@@ -608,6 +605,16 @@ def load_level(path):
                 objs.append((OBJ_TYPES[ch], 0, x, y))
             cells.append(c)
             backs.append(back)
+    # オブジェクトを置いたマスは左右の背景装飾を引き継ぐ (壁に穴が空かないように)
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch in OBJ_TYPES or ch == "P":
+                i = y * w + x
+                for nx in (x - 1, x + 1, x - 2, x + 2):
+                    if 0 <= nx < w and cells[y * w + nx] == CELL_BACK:
+                        cells[i] = CELL_BACK
+                        backs[i] = backs[y * w + nx]
+                        break
     # 背景装飾の種類を cells の上位ビットへ
     packed = []
     for c, b in zip(cells, backs):
