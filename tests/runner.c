@@ -566,10 +566,12 @@ int main(int argc, char** argv) {
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
         run(50, 0);
         screenshot(scenario);
-        run(20, KRIGHT);
-        char nm[80];
-        snprintf(nm, sizeof(nm), "%s_b", scenario);
-        screenshot(nm);
+        for (int k = 0; k < 4; k++) {
+            run(40, 0);
+            char nm[80];
+            snprintf(nm, sizeof(nm), "%s_%c", scenario, 'b' + k);
+            screenshot(nm);
+        }
     } else if (strcmp(scenario, "music") == 0) {
         /* 全曲を録音して WAV に保存 (試聴用) */
         static const char* names[] = {"title", "stage", "boss", "stage2", "final", "lastboss", "clear", "gameover"};

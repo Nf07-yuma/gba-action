@@ -198,6 +198,27 @@ def lift(frame):
     return p
 
 
+def beam(frame):
+    """レーザー 16x8 (0=照射中, 1=予告の細い線)"""
+    p = canvas(16, 8)
+    if frame == 0:
+        for x in range(16):
+            p[1][x] = I["c"]
+            p[2][x] = I["C"]
+            p[3][x] = I["W"]
+            p[4][x] = I["W"]
+            p[5][x] = I["C"]
+            p[6][x] = I["c"]
+            if (x // 2) % 3 == 0:
+                p[0][x] = I["c"]
+                p[7][x] = I["c"]
+    else:
+        for x in range(0, 16, 2):
+            p[3][x] = I["r"]
+            p[4][x] = I["o"]
+    return p
+
+
 def main():
     S = {}
     # 斬撃 (32x32, プレイヤー前方に置く。右向き基準)
@@ -223,6 +244,8 @@ def main():
         S[f"debris{i}"] = debris(i)
     for i in range(2):
         S[f"lift{i}"] = lift(i)
+    for i in range(2):
+        S[f"beam{i}"] = beam(i)
     out = ["# 自動生成: tools/compose_fx.py"]
     for name, p in S.items():
         out.append(f"@{name} {len(p[0])} {len(p)}")
