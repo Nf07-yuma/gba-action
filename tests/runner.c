@@ -55,6 +55,7 @@ typedef struct {
     uint32_t lag_frames, max_lines;
     uint32_t max_state, lag_state;
     uint32_t pwaves, charge;
+    uint32_t ending_phase;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -740,6 +741,25 @@ int main(int argc, char** argv) {
             uint32_t reached = core->busRead8(core, 0x0E00000D);
             printf("  SRAM: 到達ステージ=%u\n", reached + 1);
             check(reached == 4, "到達ステージ (ステージセレクト用) が SRAM に保存される");
+            /* スタッフロール: START で開始 → A 長押しで早送り → THE END → START でタイトル */
+            run(130, 0);
+            run(2, KSTART);
+            run(300, 0);
+            read_debug(&d);
+            check(d.state == GS_ENDING && d.ending_phase == 1, "リザルトの後にスタッフロールが流れる");
+            screenshot("boss_05b_staffroll");
+            run(240, KA);
+            screenshot("boss_05c_staffroll_cast");
+            run(160, KA);
+            screenshot("boss_05c2_staffroll_boss");
+            for (int i = 0; i < 2000 && d.ending_phase != 2; i++) { run(1, KA); read_debug(&d); }
+            check(d.ending_phase == 2, "スタッフロールが最後まで流れて THE END になる");
+            run(80, 0);
+            screenshot("boss_05d_the_end");
+            run(2, KSTART);
+            run(5, 0);
+            read_debug(&d);
+            check(d.state == GS_TITLE, "THE END から START でタイトルに戻る");
             /* リセット後のタイトルに記録が表示される */
             core->reset(core);
             run(120, 0);
