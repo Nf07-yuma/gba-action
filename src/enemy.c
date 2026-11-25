@@ -36,7 +36,7 @@ static const s8 sin64[64] = {
 
 static int is_enemy(int type) {
     return type == OBJ_CRAWLER || type == OBJ_DRONE || type == OBJ_TURRET || type == OBJ_JUMPER || type == OBJ_SHIELD ||
-           type == OBJ_MINE;
+           type == OBJ_MINE || type == OBJ_LASER;
 }
 
 void enemies_reset(int full) {
@@ -68,6 +68,7 @@ static void ent_init(Ent* e, int type, int px, int py) {
     case OBJ_JUMPER:  w = 10; h = 11; e->hp = 2; e->cool = 30; break;
     case OBJ_SHIELD:  w = 10; h = 15; e->hp = 4; break;
     case OBJ_MINE:    w = 12; h = 12; e->hp = 1; break;
+    case OBJ_LASER:   w = 12; h = 12; e->hp = 3; break;
     case OBJ_CHECKPOINT: w = 8; h = 16; break;
     case OBJ_GOAL:    w = 18; h = 30; break;
     case OBJ_HEAL:    w = 8; h = 8; break;
@@ -178,7 +179,7 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop, int pierce) {
     e->hp -= dmg;
     e->flash = 8;
     e->hitstun = 18;
-    if (e->type != OBJ_TURRET && e->type != OBJ_MINE) {
+    if (e->type != OBJ_TURRET && e->type != OBJ_MINE && e->type != OBJ_LASER) {
         e->b.vx = dir * kbx;
         e->b.vy = kby;
         if (e->type == OBJ_DRONE) e->b.vy = kby / 2;
@@ -221,6 +222,38 @@ static void update_mine(Ent* e) {
         }
     } else if (--e->cool == 0) {
         mine_explode(e);
+    }
+}
+
+/* レーザー砲台: 待機 → 予告線 (0.7 秒) → 照射 (0.5 秒)。壁まで届く。斬れば壊せる */
+#define LASER_CYCLE 170
+#define LASER_WARN 60
+#define LASER_FIRE 100
+#define LASER_END 130
+static int laser_dir(const Ent* e) { return e->phase ? 1 : -1; }
+static int laser_len(const Ent* e) {
+    int d = laser_dir(e);
+    int cx = (px_center(e) >> 4) + d, cy = py_center(e) >> 4;
+    int n = 0;
+    while (n < 15 && !level_solid(cx + d * n, cy)) n++;
+    return n * 16 + 8 - 6;
+}
+
+static void update_laser(Ent* e) {
+    u16 c = e->t % LASER_CYCLE;
+    if (c == LASER_WARN) sfx_play(SFX_SHOT);
+    if (c == LASER_FIRE) {
+        sfx_play(SFX_SLASH3);
+        shake_t = 4;
+        shake_amp = 1;
+    }
+    if (c >= LASER_FIRE && c < LASER_END && player.state != PS_DEAD) {
+        int d = laser_dir(e), len = laser_len(e);
+        int x0 = d > 0 ? px_center(e) + 6 : px_center(e) - 6 - len;
+        int y0 = py_center(e) - 3;
+        int px = FROM_FP(player.b.x), py = FROM_FP(player.b.y);
+        if (overlap(x0, y0, x0 + len, y0 + 6, px + 1, py + 2, px + player.b.w - 1, py + player.b.h))
+            player_damage(2, px_center(e));
     }
 }
 
@@ -465,10 +498,11 @@ void enemies_update(void) {
         case OBJ_JUMPER:  update_jumper(e); break;
         case OBJ_SHIELD:  update_shield(e); break;
         case OBJ_MINE:    update_mine(e); break;
+        case OBJ_LASER:   update_laser(e); break;
         }
         if (!e->active) continue;
         /* トゲに落ちたら壊れる */
-        if (e->type != OBJ_DRONE && e->type != OBJ_MINE && body_touch_hazard(&e->b)) {
+        if (e->type != OBJ_DRONE && e->type != OBJ_MINE && e->type != OBJ_LASER && body_touch_hazard(&e->b)) {
             enemy_die(e);
             continue;
         }
@@ -517,6 +551,22 @@ void enemies_draw(void) {
         case OBJ_TURRET:  spr = e->state ? SPR_TURRET1 : SPR_TURRET0; oam_put(spr, cx - 8, bot - 16, flip, pal, 2); break;
         case OBJ_JUMPER:  spr = e->b.on_ground ? SPR_JUMPER0 : SPR_JUMPER1; oam_put(spr, cx - 8, bot - 16, flip, pal, 2); break;
         case OBJ_SHIELD:  spr = SPR_SHIELD0 + ((ABS(e->b.vx) > 0 && (e->t >> 3) & 1) ? 1 : 0); oam_put(spr, cx - 8 + (flip ? 2 : -2), bot - 16, flip, pal, 2); break;
+        case OBJ_LASER: {
+            u16 c = e->t % LASER_CYCLE;
+            int d = laser_dir(e);
+            oam_put(c >= LASER_WARN && c < LASER_END && (c & 4) ? SPR_LASER1 : SPR_LASER0, cx - 8, bot - 14, d > 0, pal, 2);
+            if (c >= LASER_WARN && c < LASER_END) {
+                int len = laser_len(e);
+                int spr2 = c >= LASER_FIRE ? SPR_BEAM0 : SPR_BEAM1;
+                if (c < LASER_FIRE && (c & 2)) break;
+                int y = FROM_FP(e->b.y) + e->b.h / 2 - 4 - cam_y;
+                for (int o = 0; o < len; o += 16) {
+                    int x = d > 0 ? cx + 6 + o : cx - 6 - o - 16;
+                    oam_put(spr2, x, y, 0, OBJPAL_NORMAL, 1);
+                }
+            }
+            break;
+        }
         case OBJ_MINE:
             spr = (e->state && (e->cool & (e->cool < 20 ? 2 : 4))) ? SPR_MINE1 : SPR_MINE0;
             oam_put(spr, cx - 8, bot - 14, 0, pal, 2);
