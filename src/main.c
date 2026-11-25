@@ -155,6 +155,7 @@ static void stage_begin(int respawn) {
     game.chain = 0;
     game.chain_t = 0;
     game.hitstop = 0;
+    game.slowmo = 0;
     camera_snap(game.checkpoint_x, game.checkpoint_y - 12);
     level_force_redraw();
     loading_frame = 2;
@@ -229,16 +230,21 @@ static void intro_update(void) {
 static void world_step(void) {
     game.stage_time++;
     game.total_time++;
+    int slow_skip = 0;
+    if (game.slowmo) {
+        game.slowmo--;
+        slow_skip = game.slowmo & 1;
+    }
     if (game.hitstop) {
         game.hitstop--;
-    } else {
+    } else if (!slow_skip) {
         player_update();
         enemies_spawn_check();
         enemies_update();
         boss_update();
         bullets_update();
     }
-    fx_update();
+    if (!slow_skip) fx_update();
     if (game.chain_t && --game.chain_t == 0) game.chain = 0;
     camera_update(FROM_FP(player.b.x) + player.b.w / 2, FROM_FP(player.b.y) + player.b.h / 2, player.dir);
     level_scroll_update();

@@ -716,10 +716,20 @@ int main(int argc, char** argv) {
         int stuck = 0;
         int min_hp = 99;
         int out_of_arena = 0;
+        int finish_shot = 0;
         for (int t = 0; t < 5400; t++) {
             read_debug(&d);
             if (d.boss_hp > 0 && d.boss_hp < min_hp) min_hp = d.boss_hp;
             if (t == 600) screenshot("boss_03_mid");
+            if (d.boss_state == BS_DEAD && d.state == GS_PLAY && !finish_shot) {
+                finish_shot = 1;
+                /* とどめの一撃 → スローモーション中の爆発 */
+                run(20, 0);
+                screenshot("boss_03b_finish");
+                run(30, 0);
+                screenshot("boss_03c_finish");
+                read_debug(&d);
+            }
             if (getenv("BOSS_LOG") && d.hp < prev.hp && d.state == GS_PLAY)
                 printf("  [hurt] t=%d hp %d->%d boss_state=%u dx=%d py=%d bossmove=%d\n", t, prev.hp, d.hp, d.boss_state, d.boss_x - d.px - 5, d.py, d.boss_x - prev.boss_x);
             if (d.boss_hp > 0 && (d.boss_x < (int)d.cam_x || d.boss_x > (int)d.cam_x + 240)) out_of_arena++;
