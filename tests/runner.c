@@ -56,6 +56,7 @@ typedef struct {
     uint32_t max_state, lag_state;
     uint32_t pwaves, charge;
     uint32_t ending_phase;
+    uint32_t popups;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -779,9 +780,15 @@ int main(int argc, char** argv) {
         DebugInfo prev = d;
         int stuck = 0;
         uint32_t max_stage = 0;
+        int popup_shot = 0;
         for (int t = 0; t < 60 * 60 * 6; t++) {
             bot_step(t, &prev, &stuck);
             if (prev.stage > max_stage) max_stage = prev.stage;
+            if (prev.popups == 1 && !popup_shot) {
+                run(10, 0);
+                screenshot("bot_chain_popup");
+                popup_shot = 1;
+            }
             if (t % 1800 == 0) {
                 char name[64];
                 snprintf(name, sizeof(name), "bot_%03d", t / 1800);
@@ -798,6 +805,7 @@ int main(int argc, char** argv) {
         printf("  到達ステージ: %u\n", max_stage + 1);
         read_debug(&d);
         check(d.clears >= 1, "ボットがステージ 1 をクリアできる (難易度/地形の回帰検知)");
+        check(d.popups >= 1, "CHAIN の節目 (10) でポップアップとボーナスが出る");
     }
 
     print_debug("final");
