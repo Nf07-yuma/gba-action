@@ -50,7 +50,7 @@ void player_init(s32 x, s32 y) {
     player.b.y = TO_FP(y);
     player.b.oneway = 1;
     player.dir = 1;
-    player.hp_max = 8;
+    player.hp_max = game.easy ? 12 : 8;
     player.hp = player.hp_max;
     player.state = PS_NORMAL;
     player.inv = 30;
@@ -156,7 +156,7 @@ void player_damage(int dmg, int from_x) {
     player.state_t = 0;
     player.b.vx = (center_x() < from_x ? -1 : 1) * 0x200;
     player.b.vy = -0x300;
-    player.inv = 90;
+    player.inv = game.easy ? 120 : 90;
     shake_t = 8;
     shake_amp = 2;
     game.hitstop = 4;

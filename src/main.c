@@ -32,9 +32,10 @@ void hud_draw(int force) {
     }
     if (hud_last_lives != (u16)game.lives) {
         hud_last_lives = (u16)game.lives;
-        m[10] = HUD_TILE_LIFE_ICON | (BGPAL_HUD << 12);
-        text_put(11, 0, "x", BGPAL_HUD);
-        text_num(12, 0, (u32)MAX(0, game.lives), 1, BGPAL_HUD);
+        int lx = player.hp_max + 2;
+        m[lx] = HUD_TILE_LIFE_ICON | (BGPAL_HUD << 12);
+        text_put(lx + 1, 0, "x", BGPAL_HUD);
+        text_num(lx + 2, 0, (u32)MAX(0, game.lives), 1, BGPAL_HUD);
     }
     if (hud_last_score != game.score) {
         hud_last_score = game.score;
@@ -160,13 +161,22 @@ static void title_update(void) {
         text_put_center(17, "B:SLASH  A:JUMP  R:DASH", BGPAL_HUD_C);
         text_put_center(19, "(C) 2026 STEEL CHAIN PROJECT", BGPAL_HUD);
     }
-    if (t > 1) text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
+    /* 難易度選択 (左右で切り替え) */
+    if (key_hit(KEY_LEFT | KEY_RIGHT | KEY_SELECT)) {
+        game.easy ^= 1;
+        sfx_play(SFX_SELECT);
+    }
+    if (t > 1) {
+        text_put_center(11, game.easy ? "<  EASY   >" : "<  NORMAL >", game.easy ? BGPAL_HUD_C : BGPAL_HUD);
+        text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
+    }
     oam_begin();
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 104, 70, 0, OBJPAL_NORMAL, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 28, 74, 0, OBJPAL_NORMAL, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 180, 74, 1, OBJPAL_GHOST, 0);
     if (key_hit(KEY_START | KEY_A)) {
         sfx_play(SFX_SELECT);
         game.stage = 0;
-        game.lives = 3;
+        game.lives = START_LIVES;
         game.score = 0;
         game.kills = 0;
         game.deaths = 0;
@@ -293,7 +303,7 @@ static void gameover_update(void) {
     }
     oam_begin();
     if (game.state_t > 30 && key_hit(KEY_START | KEY_A)) {
-        game.lives = 3;
+        game.lives = START_LIVES;
         game.score = stage_start_score / 2;
         set_state(GS_STAGE_INTRO);
     } else if (game.state_t > 30 && key_hit(KEY_SELECT)) {
@@ -372,7 +382,7 @@ int main(void) {
         /* テスト用命令 */
         if (g_debug.cmd == 1 && game.state != GS_STAGE_INTRO) {
             game.stage = (u8)g_debug.cmd_arg;
-            if (game.lives <= 0) game.lives = 3;
+            if (game.lives <= 0) game.lives = START_LIVES;
             set_state(GS_STAGE_INTRO);
             g_debug.cmd = 0;
         } else if (g_debug.cmd == 3) {

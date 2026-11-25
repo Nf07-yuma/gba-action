@@ -34,7 +34,8 @@ static const s8 sin64[64] = {
 };
 
 static int is_enemy(int type) {
-    return type == OBJ_CRAWLER || type == OBJ_DRONE || type == OBJ_TURRET || type == OBJ_JUMPER || type == OBJ_SHIELD;
+    return type == OBJ_CRAWLER || type == OBJ_DRONE || type == OBJ_TURRET || type == OBJ_JUMPER || type == OBJ_SHIELD ||
+           type == OBJ_MINE;
 }
 
 void enemies_reset(int full) {
@@ -65,6 +66,7 @@ static void ent_init(Ent* e, int type, int px, int py) {
     case OBJ_TURRET:  w = 14; h = 12; e->hp = 4; break;
     case OBJ_JUMPER:  w = 10; h = 11; e->hp = 2; e->cool = 30; break;
     case OBJ_SHIELD:  w = 10; h = 15; e->hp = 4; break;
+    case OBJ_MINE:    w = 12; h = 12; e->hp = 1; break;
     case OBJ_CHECKPOINT: w = 8; h = 16; break;
     case OBJ_GOAL:    w = 18; h = 30; break;
     case OBJ_HEAL:    w = 8; h = 8; break;
@@ -75,7 +77,7 @@ static void ent_init(Ent* e, int type, int px, int py) {
     e->b.h = (s16)h;
     e->b.x = TO_FP(px - w / 2);
     e->b.y = TO_FP(py - h);
-    if (type == OBJ_DRONE) e->b.y = TO_FP(py - h - 4);
+    if (type == OBJ_DRONE || type == OBJ_MINE) e->b.y = TO_FP(py - h - 4);
     /* 足場の上面は配置したセルの下端 (= 隣の地面と同じ高さ) */
     if (type == OBJ_LIFT_H || type == OBJ_LIFT_V) e->b.y = TO_FP(py);
     e->ax = px;
@@ -175,7 +177,7 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop) {
     e->hp -= dmg;
     e->flash = 8;
     e->hitstun = 18;
-    if (e->type != OBJ_TURRET) {
+    if (e->type != OBJ_TURRET && e->type != OBJ_MINE) {
         e->b.vx = dir * kbx;
         e->b.vy = kby;
         if (e->type == OBJ_DRONE) e->b.vy = kby / 2;
@@ -191,6 +193,34 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop) {
         screen_flash(2);
     }
     if (e->hp <= 0) enemy_die(e);
+}
+
+/* 浮遊機雷: 近づくと点滅し、時間切れで全方位に破片弾。点滅中に斬れば安全に壊せる */
+static void mine_explode(Ent* e) {
+    static const s16 d8[8][2] = {{0x180, 0}, {0x110, 0x110}, {0, 0x180}, {-0x110, 0x110},
+                                 {-0x180, 0}, {-0x110, -0x110}, {0, -0x180}, {0x110, -0x110}};
+    int cx = px_center(e), cy = py_center(e);
+    for (int i = 0; i < 8; i++) bullet_fire(TO_FP(cx), TO_FP(cy), d8[i][0], d8[i][1]);
+    fx_spawn(FX_BOOM, cx - 8, cy - 8, 0);
+    sfx_play(SFX_BOOM);
+    shake_t = 6;
+    shake_amp = 2;
+    ent_free(e, 1);
+}
+
+static void update_mine(Ent* e) {
+    int dx = player_cx() - px_center(e), dy = player_cy() - py_center(e);
+    /* ふわふわ上下 */
+    e->b.y = TO_FP(e->ay) + sin64[(e->t * 2) & 63] * TO_FP(4) / 64;
+    if (e->state == 0) {
+        if (ABS(dx) + ABS(dy) < 56) {
+            e->state = 1;
+            e->cool = 50;
+            sfx_play(SFX_SHOT);
+        }
+    } else if (--e->cool == 0) {
+        mine_explode(e);
+    }
 }
 
 static void update_crawler(Ent* e) {
@@ -433,10 +463,11 @@ void enemies_update(void) {
         case OBJ_TURRET:  update_turret(e); break;
         case OBJ_JUMPER:  update_jumper(e); break;
         case OBJ_SHIELD:  update_shield(e); break;
+        case OBJ_MINE:    update_mine(e); break;
         }
         if (!e->active) continue;
         /* トゲに落ちたら壊れる */
-        if (e->type != OBJ_DRONE && body_touch_hazard(&e->b)) {
+        if (e->type != OBJ_DRONE && e->type != OBJ_MINE && body_touch_hazard(&e->b)) {
             enemy_die(e);
             continue;
         }
@@ -447,7 +478,12 @@ void enemies_update(void) {
             enemy_hit(e, dmg, kbx, kby, stop);
             if (!e->active) continue;
         }
-        /* 接触ダメージ (怯み中は無害) */
+        /* 接触ダメージ (怯み中は無害)。機雷は触れると即爆発 */
+        if (e->type == OBJ_MINE && body_overlap(&e->b, &player.b)) {
+            player_damage(2, px_center(e));
+            mine_explode(e);
+            continue;
+        }
         if (!e->hitstun && body_overlap(&e->b, &player.b)) {
             player_damage(1, px_center(e));
         }
@@ -469,6 +505,10 @@ void enemies_draw(void) {
         case OBJ_TURRET:  spr = e->state ? SPR_TURRET1 : SPR_TURRET0; oam_put(spr, cx - 8, bot - 16, flip, pal, 2); break;
         case OBJ_JUMPER:  spr = e->b.on_ground ? SPR_JUMPER0 : SPR_JUMPER1; oam_put(spr, cx - 8, bot - 16, flip, pal, 2); break;
         case OBJ_SHIELD:  spr = SPR_SHIELD0 + ((ABS(e->b.vx) > 0 && (e->t >> 3) & 1) ? 1 : 0); oam_put(spr, cx - 8 + (flip ? 2 : -2), bot - 16, flip, pal, 2); break;
+        case OBJ_MINE:
+            spr = (e->state && (e->cool & (e->cool < 20 ? 2 : 4))) ? SPR_MINE1 : SPR_MINE0;
+            oam_put(spr, cx - 8, bot - 14, 0, pal, 2);
+            break;
         case OBJ_CHECKPOINT:
             spr = (obj_flag[e->obj] & OF_LIT) ? SPR_CHECKPOINT1 : SPR_CHECKPOINT0;
             oam_put(spr, cx - 8, bot - 16, 0, OBJPAL_NORMAL, 2);

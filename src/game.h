@@ -89,6 +89,7 @@ void level_scroll_update(void);
 void level_force_redraw(void);
 void body_move(Body* b);
 int body_touch_hazard(const Body* b);
+int body_conveyor(const Body* b);
 void camera_update(s32 target_x, s32 target_y, int dir);
 void camera_snap(s32 target_x, s32 target_y);
 
@@ -194,7 +195,9 @@ typedef struct {
     u16 kills;
     u16 deaths;
     u8 hud_dirty;
+    u8 easy;      /* 1 = EASY (HP/残機が多い) */
 } Game;
+#define START_LIVES (game.easy ? 5 : 3)
 extern Game game;
 void game_add_chain(int hits);
 void game_add_score(u32 pts);
