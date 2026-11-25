@@ -176,6 +176,9 @@ enum { SFX_JUMP, SFX_SLASH, SFX_SLASH3, SFX_HIT, SFX_BOOM, SFX_HURT, SFX_PICKUP,
 void sound_init(void);
 void sfx_play(int id);
 void sound_update(void);
+void music_play(int id);
+void music_stop(void);
+void music_pause(int on);
 
 /* ---- テスト用デバッグブロック (EWRAM 先頭固定) ---- */
 typedef struct {

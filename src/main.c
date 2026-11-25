@@ -80,6 +80,7 @@ void game_stage_clear(void) {
     player.state_t = 0;
     set_state(GS_CLEAR);
     sfx_play(SFX_CHECK);
+    music_stop();
 }
 
 void game_on_player_dead(void) {
@@ -125,6 +126,7 @@ static void title_enter(void) {
     cam_x = 0;
     cam_y = 0;
     title_cursor = 0;
+    music_play(SONG_TITLE);
 }
 
 static void title_update(void) {
@@ -158,6 +160,7 @@ static void intro_update(void) {
     if (game.state_t == 1) {
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_OBJ;
         stage_begin(0);
+        music_play(SONG_STAGE);
         char buf[16] = "STAGE 1";
         buf[6] = (char)('1' + game.stage);
         text_put_center(7, buf, BGPAL_HUD_Y);
@@ -194,6 +197,7 @@ static void play_update(void) {
         set_state(GS_PAUSE);
         text_put_center(8, "- PAUSE -", BGPAL_HUD_Y);
         sfx_play(SFX_SELECT);
+        music_pause(1);
         return;
     }
     world_step();
@@ -204,6 +208,7 @@ static void pause_update(void) {
     draw_world();
     if (key_hit(KEY_START)) {
         text_put(0, 8, "                              ", BGPAL_HUD);
+        music_pause(0);
         set_state(GS_PLAY);
     }
 }
@@ -256,6 +261,7 @@ static void clear_update(void) {
 
 static void gameover_update(void) {
     if (game.state_t == 1) {
+        music_stop();
         text_clear();
         text_put_center(7, "GAME OVER", BGPAL_HUD);
         text_put_center(11, "START: CONTINUE", BGPAL_HUD_C);
@@ -276,6 +282,7 @@ static void ending_update(void) {
     if (t == 1) {
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_OBJ;
         text_clear();
+        music_play(SONG_TITLE);
         text_put_center(3, "MISSION COMPLETE", BGPAL_HUD_Y);
         text_put_center(6, "THE CORE IS SILENT.", BGPAL_HUD);
         text_put_center(7, "STEEL RETURNS HOME.", BGPAL_HUD);

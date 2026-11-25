@@ -623,6 +623,71 @@ def load_level(path):
 
 
 # ---------------------------------------------------------------------------
+# 音楽 (簡易トラッカー形式)
+# ---------------------------------------------------------------------------
+NOTE_BASE = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+MUS_HOLD, MUS_OFF = 0, 1
+DRUMS = {".": 0, "K": 1, "S": 2, "H": 3}
+
+
+def parse_note(tok, where):
+    if tok == "---":
+        return MUS_HOLD
+    if tok == "...":
+        return MUS_OFF
+    try:
+        n = NOTE_BASE[tok[0]]
+        if tok[1] == "#":
+            n += 1
+        octave = int(tok[2])
+    except (KeyError, IndexError, ValueError):
+        sys.exit(f"{where}: 不明な音符 {tok}")
+    midi = 12 * (octave + 1) + n
+    if not 24 <= midi <= 108:
+        sys.exit(f"{where}: 音域外 {tok}")
+    return midi
+
+
+def load_song(path):
+    speed = 8
+    chans = {"lead": [], "bass": [], "drum": []}
+    cur = None
+    with open(path, encoding="utf-8") as f:
+        for lineno, raw in enumerate(f, 1):
+            line = raw.split(";")[0].strip() if not raw.startswith(";speed") else raw.strip()
+            if raw.startswith(";speed"):
+                speed = int(raw.split("=")[1])
+                continue
+            if not line:
+                continue
+            if line.startswith("["):
+                cur = line.strip("[]")
+                continue
+            where = f"{path}:{lineno}"
+            for tok in line.split():
+                if cur == "drum":
+                    for ch in tok:
+                        if ch not in DRUMS:
+                            sys.exit(f"{where}: 不明なドラム {ch}")
+                        chans["drum"].append(DRUMS[ch])
+                else:
+                    chans[cur].append(parse_note(tok, where))
+    for k in chans:
+        if not chans[k]:
+            chans[k] = [MUS_OFF]
+    return speed, chans
+
+
+def freq_tables():
+    sq, wv = [], []
+    for m in range(128):
+        f = 440.0 * 2 ** ((m - 69) / 12)
+        sq.append(max(0, min(2047, int(round(2048 - 131072 / f)))))
+        wv.append(max(0, min(2047, int(round(2048 - 65536 / f)))))
+    return sq, wv
+
+
+# ---------------------------------------------------------------------------
 # C 出力
 # ---------------------------------------------------------------------------
 def c_bytes_as_u32(data):
@@ -774,6 +839,32 @@ def main():
     for (n, lv) in lv_names:
         name = lv["name"].replace('"', "")
         C.append(f"    {{ {lv['w']}, {lv['h']}, {n}_cells, {lv['spawn'][0]}, {lv['spawn'][1]}, {n}_objs, {len(lv['objs'])}, {lv['theme']}, \"{name}\" }},")
+    C.append("};")
+
+    # ---- 音楽
+    sq, wv = freq_tables()
+    H.append("extern const u16 freq_square[128];")
+    H.append("extern const u16 freq_wave[128];")
+    C.append(f"const u16 freq_square[128] = {{\n{c_u16(sq)}\n}};")
+    C.append(f"const u16 freq_wave[128] = {{\n{c_u16(wv)}\n}};")
+    H.append("typedef struct { const u8* lead; const u8* bass; const u8* drum; u16 lead_len, bass_len, drum_len; u8 speed; } Song;")
+    H.append("#define MUS_HOLD 0")
+    H.append("#define MUS_OFF 1")
+    music_dir = os.path.join(ASSETS, "music")
+    song_files = sorted(f for f in os.listdir(music_dir) if f.endswith(".txt"))
+    H.append("enum {")
+    for fn in song_files:
+        H.append(f"    SONG_{os.path.splitext(fn)[0].split('_', 1)[1].upper()},")
+    H.append("    SONG_COUNT\n};")
+    H.append("extern const Song songs[SONG_COUNT];")
+    entries = []
+    for i, fn in enumerate(song_files):
+        speed, ch = load_song(os.path.join(music_dir, fn))
+        for k in ("lead", "bass", "drum"):
+            C.append(f"static const u8 song{i}_{k}[{len(ch[k])}] = {{\n{c_u8(ch[k])}\n}};")
+        entries.append(f"    {{ song{i}_lead, song{i}_bass, song{i}_drum, {len(ch['lead'])}, {len(ch['bass'])}, {len(ch['drum'])}, {speed} }},")
+    C.append("const Song songs[SONG_COUNT] = {")
+    C += entries
     C.append("};")
 
     H += ["", "#endif", ""]

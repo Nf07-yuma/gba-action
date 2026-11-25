@@ -37,7 +37,7 @@ make            # steel_chain.gba が生成される
 
 ### テスト（ヘッドレス自動プレイ）
 
-mGBA のコアライブラリを使い、ROM を画面なしで実行して自動操作・状態検証・スクリーンショット保存を行います。
+mGBA のコアライブラリを使い、ROM を画面なしで実行して自動操作・状態検証・スクリーンショット保存・BGM の録音（WAV）を行います。
 
 ```sh
 sudo apt-get install libmgba-dev zlib1g-dev
@@ -69,6 +69,7 @@ tests/runner.c  ヘッドレステストランナー (libmgba)
 
 - `assets/sprites.txt` … 敵・アイテムのドット絵（1 文字 = 1 ピクセル、文字とパレットの対応はファイル先頭）
 - `tools/compose_player.py` … 主人公のポーズ（関節座標）を編集して `make sprites` で再合成
+- `assets/music/*.txt` … BGM の楽譜（`C-5` 音符、`---` 伸ばす、`...` 消音、ドラムは `K`=キック `S`=スネア `H`=ハット）
 - `assets/levels/*.txt` … ステージ（`#`=壁 `=`=足場 `^`=トゲ `P`=開始位置 `c/d/t/j/s`=敵 `C`=中間地点 `G`=ゴール `+`=回復）
 
 ## CI / CD

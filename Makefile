@@ -15,7 +15,7 @@ LDFLAGS := $(ARCH) -nostartfiles -nostdlib -T gba.ld -Wl,--gc-sections -Wl,-Map,
 
 SRCS    := $(wildcard src/*.c)
 OBJS    := $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS)) $(BUILD)/assets.o $(BUILD)/crt0.o
-ASSET_SRC := $(wildcard assets/*.txt assets/levels/*.txt) tools/gen_assets.py
+ASSET_SRC := $(wildcard assets/*.txt assets/levels/*.txt assets/music/*.txt) tools/gen_assets.py
 
 .PHONY: all clean test assets sprites
 
@@ -51,7 +51,7 @@ $(TARGET).gba: $(BUILD)/$(TARGET).elf
 # ---- ヘッドレステスト (mGBA コア) ----
 $(BUILD)/runner: tests/runner.c
 	@mkdir -p $(BUILD)
-	gcc -O2 -Wall -o $@ $< -lmgba -lz
+	gcc -O2 -Wall -o $@ $< -lmgba -lz -lm
 
 test: $(TARGET).gba $(BUILD)/runner
 	$(BUILD)/runner $(TARGET).gba $(BUILD)/test-out

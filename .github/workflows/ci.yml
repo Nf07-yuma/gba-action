@@ -42,6 +42,7 @@ jobs:
           path: |
             steel_chain.gba
             build/test-out/*.png
+            build/test-out/*.wav
             build/bot-out/*.png
             build/bot-report.txt
           if-no-files-found: warn
