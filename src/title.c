@@ -2,8 +2,15 @@
 #include "game.h"
 
 static int title_cursor;
+static u8 demo_count;              /* デモの回数 (ステージを交互にする) */
+static u8 saved_easy, saved_hard;  /* デモ前に選ばれていた難易度 */
 
 void title_enter(void) {
+    if (game.demo) {
+        /* デモから戻ったら選んでいた難易度を復元 */
+        game.easy = saved_easy;
+        game.hard = saved_hard;
+    }
     game.demo = 0;
     game_set_state(GS_TITLE);
     REG_BGVOFS(BG_HUD) = 0;
@@ -43,8 +50,10 @@ static u16 demo_keys(void) {
 }
 
 static void demo_start(void) {
+    saved_easy = game.easy;
+    saved_hard = game.hard;
     game.demo = 1;
-    game.stage = 0;
+    game.stage = (u8)(demo_count++ & 1); /* ステージ1 と 2 を交互に */
     game.lives = 1;
     game.score = 0;
     game.easy = 0;
