@@ -198,6 +198,8 @@ typedef struct {
     u16 chain;
     u16 chain_t;
     u16 chain_best;
+    u16 stage_chain_best; /* このステージ内の最大 CHAIN (ランク評価用) */
+    u16 stage_deaths;     /* このステージでのミス回数 */
     u16 hitstop;
     u16 slowmo;   /* ボス撃破時のスローモーション残りフレーム (この間は 2 フレームに 1 回だけ進む) */
     u32 frame;
@@ -282,6 +284,8 @@ typedef struct {
     u32 charge;
     u32 ending_phase; /* 0=リザルト, 1=スタッフロール, 2=THE END */
     u32 popups;       /* CHAIN の節目ポップアップを出した回数 */
+    u32 rank;         /* 直近のステージランク 0=C 1=B 2=A 3=S */
+    u32 rank_hist;    /* ステージごとのランク+1 (4bit x 5) */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

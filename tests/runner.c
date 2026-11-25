@@ -57,6 +57,7 @@ typedef struct {
     uint32_t pwaves, charge;
     uint32_t ending_phase;
     uint32_t popups;
+    uint32_t rank, rank_hist;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -687,6 +688,13 @@ int main(int argc, char** argv) {
         read_debug(&d);
         print_debug("stage end");
         check(d.clears > clears0 || d.state == GS_ENDING, "ボットがこのステージをクリアできる");
+        if (d.clears > clears0) {
+            run(60, 0);
+            read_debug(&d);
+            screenshot("stage_clear_rank");
+            printf("  ランク: %c\n", "CBAS"[d.rank & 3]);
+            check(d.rank_hist != 0, "クリア画面でランク評価が出る");
+        }
     } else if (strncmp(scenario, "boss", 4) == 0) {
         /* ボス戦へ直行し、ボスの出現・攻撃・被弾を検証 (boss=ステージ3, boss5=ステージ5) */
         int bst = scenario[4] ? atoi(scenario + 4) - 1 : 2;
@@ -822,6 +830,13 @@ int main(int argc, char** argv) {
         }
         print_debug("bot end");
         printf("  到達ステージ: %u\n", max_stage + 1);
+        read_debug(&d);
+        printf("  ステージ別ランク:");
+        for (int i = 0; i < 5; i++) {
+            uint32_t r = (d.rank_hist >> (i * 4)) & 15;
+            printf(" %c", r ? "CBAS"[r - 1] : '-');
+        }
+        printf("\n");
         read_debug(&d);
         check(d.clears >= 1, "ボットがステージ 1 をクリアできる (難易度/地形の回帰検知)");
         if (!strstr(scenario, "hard")) check(d.popups >= 1, "CHAIN の節目 (10) でポップアップとボーナスが出る");
