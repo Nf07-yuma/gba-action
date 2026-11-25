@@ -221,6 +221,7 @@ extern Game game;
 void game_add_chain(int hits);
 void game_add_score(u32 pts);
 void game_set_checkpoint(s32 x, s32 y);
+void game_popup(const char* msg);
 void game_stage_clear(void);
 void game_on_player_dead(void);
 void game_boss_defeated(int x, int y);
@@ -295,6 +296,7 @@ typedef struct {
     u32 ambient;      /* 環境演出の粒の数 */
     u32 best_time;    /* 直近のクリアでベストタイムを更新したら 1 */
     u32 combo;        /* 攻撃中の段 (0-2 地上, 3 空中, 4 ダッシュ斬り) | 攻撃中フラグ 0x100 */
+    u32 checkpoints;  /* 通過した中間地点の数 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

@@ -61,6 +61,7 @@ typedef struct {
     uint32_t ambient;
     uint32_t best_time;
     uint32_t combo;
+    uint32_t checkpoints;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -726,6 +727,7 @@ int main(int argc, char** argv) {
             screenshot("stage_clear_rank");
             printf("  ランク: %c\n", "CBAS"[d.rank & 3]);
             check(d.rank_hist != 0, "クリア画面でランク評価が出る");
+            check(d.checkpoints >= 1, "中間地点を通過すると CHECKPOINT が表示される");
             uint32_t cl = 0;
             for (int i = 0; i < 4; i++) cl |= (uint32_t)core->busRead8(core, 0x0E00000C + i) << (i * 8);
             uint32_t saved = (cl >> (16 + st * 3)) & 7;
