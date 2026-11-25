@@ -62,6 +62,7 @@ void text_put(int x, int y, const char* s, int pal);
 void text_put_center(int y, const char* s, int pal);
 void text_num(int x, int y, u32 n, int digits, int pal);
 void text_fill(int x, int y, int w, int h, int tile, int pal);
+void text_time(int x, int y, u32 frames, int pal); /* mm:ss */
 
 /* ---- 物理ボディ ---- */
 typedef struct {
@@ -218,6 +219,13 @@ void game_stage_clear(void);
 void game_on_player_dead(void);
 void game_boss_defeated(int x, int y);
 void hud_draw(int force);
+void game_set_state(int s);
+
+/* ---- title.c / ending.c ---- */
+void title_enter(void);
+void title_update(void);
+void demo_input(void);
+void ending_update(void);
 
 /* ---- save.c ---- */
 extern u32 save_hiscore;
