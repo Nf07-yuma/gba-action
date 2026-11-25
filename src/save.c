@@ -12,6 +12,11 @@ u16 save_best_chain;
 u8 save_cleared;
 u8 save_reached; /* 到達した最も先のステージ (0 始まり) */
 u8 save_rank[5];  /* ステージ別の最高ランク+1 (0=未記録, 1=C .. 4=S) */
+u16 save_best_time[5]; /* ステージ別のベストタイム (フレーム, 0=未記録) */
+
+/* ベストタイムは別ブロック (オフセット 32〜): magic 'STT1' + u16 x 5 + チェックサム */
+#define TIME_OFF 32
+#define TIME_MAGIC 0x31545453u
 
 static u32 rd32(int off) {
     return SRAM[off] | (SRAM[off + 1] << 8) | (SRAM[off + 2] << 16) | ((u32)SRAM[off + 3] << 24);
@@ -26,6 +31,17 @@ void save_load(void) {
     save_cleared = 0;
     save_reached = 0;
     for (int i = 0; i < 5; i++) save_rank[i] = 0;
+    for (int i = 0; i < 5; i++) save_best_time[i] = 0;
+    if (rd32(TIME_OFF) == TIME_MAGIC) {
+        u32 sum = 0x5A5A5A5A;
+        u16 tm[5];
+        for (int i = 0; i < 5; i++) {
+            tm[i] = (u16)(SRAM[TIME_OFF + 4 + i * 2] | (SRAM[TIME_OFF + 5 + i * 2] << 8));
+            sum ^= (u32)tm[i] << ((i & 1) * 16);
+        }
+        if (sum == rd32(TIME_OFF + 14))
+            for (int i = 0; i < 5; i++) save_best_time[i] = tm[i];
+    }
     if (rd32(0) != SAVE_MAGIC) return;
     u32 hs = rd32(4), ch = rd32(8), cl = rd32(12), sum = rd32(16);
     if ((hs ^ ch ^ cl ^ 0x5A5A5A5A) != sum) return;
@@ -79,5 +95,22 @@ int save_rank_stage(int stage, int rank) {
     if (stage < 0 || stage >= 5 || rank + 1 <= save_rank[stage]) return 0;
     save_rank[stage] = (u8)(rank + 1);
     save_write();
+    return 1;
+}
+
+/* ステージのクリアタイムを記録。ベスト更新なら 1 を返す */
+int save_time_stage(int stage, u32 frames) {
+    if (stage < 0 || stage >= 5) return 0;
+    u16 f = (u16)MIN(frames, 65535u);
+    if (save_best_time[stage] && f >= save_best_time[stage]) return 0;
+    save_best_time[stage] = f;
+    u32 sum = 0x5A5A5A5A;
+    for (int i = 0; i < 5; i++) {
+        SRAM[TIME_OFF + 4 + i * 2] = (u8)save_best_time[i];
+        SRAM[TIME_OFF + 5 + i * 2] = (u8)(save_best_time[i] >> 8);
+        sum ^= (u32)save_best_time[i] << ((i & 1) * 16);
+    }
+    wr32(TIME_OFF + 14, sum);
+    wr32(TIME_OFF, TIME_MAGIC);
     return 1;
 }

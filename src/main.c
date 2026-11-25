@@ -347,6 +347,16 @@ static void clear_update(void) {
         text_put_center(5, "STAGE CLEAR!", BGPAL_HUD_Y);
         text_put(7, 8, "TIME", BGPAL_HUD_C);
         text_time(20, 8, game.stage_time, BGPAL_HUD);
+        /* ベストタイム (デモでは記録しない) */
+        g_debug.best_time = 0;
+        u16 prev_best = save_best_time[game.stage < 5 ? game.stage : 0];
+        if (!game.demo && save_time_stage(game.stage, game.stage_time)) {
+            text_put(7, 9, prev_best ? "NEW BEST TIME!" : "FIRST CLEAR!", BGPAL_HUD_Y);
+            g_debug.best_time = 1;
+        } else if (prev_best) {
+            text_put(7, 9, "BEST", BGPAL_HUD);
+            text_time(20, 9, prev_best, BGPAL_HUD);
+        }
         text_put(7, 10, "TIME BONUS", BGPAL_HUD);
         text_num(20, 10, tbonus, 5, BGPAL_HUD);
         text_put(7, 12, "CHAIN BONUS", BGPAL_HUD);
