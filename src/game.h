@@ -180,6 +180,7 @@ enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH, FX_DEBRIS };
 void fx_debris(int x, int y, int n);
 void screen_flash(int frames);
 void fx_flash_apply(void);
+extern u8 bg_dim;
 void fx_clear(void);
 void fx_spawn(int type, int x, int y, int flip);
 void fx_spawn_slash(int spr0, int x, int y, int flip);
@@ -269,6 +270,7 @@ typedef struct {
     u32 max_state, lag_state; /* 発生時の画面状態 | (経過フレーム << 8) */
     u32 pwaves;      /* 飛んでいる斬撃波の数 */
     u32 charge;
+    u32 ending_phase; /* 0=リザルト, 1=スタッフロール, 2=THE END */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u
