@@ -508,6 +508,17 @@ int main(int argc, char** argv) {
         read_debug(&d);
         check(d.pwaves >= 1, "離すと斬撃波が飛ぶ");
         screenshot("04b_charge");
+        /* ポーズメニュー: START で開き、下→A で「ステージやり直し」 */
+        run(30, 0);
+        run(2, KSTART);
+        run(10, 0);
+        read_debug(&d);
+        check(d.state == GS_PAUSE, "START でポーズメニューが開く");
+        screenshot("04c_pause");
+        run(2, KSTART);
+        run(5, 0);
+        read_debug(&d);
+        check(d.state == GS_PLAY, "START でゲームに戻る");
         run(400, 0);
         check(audio_end("bgm_stage") > 200.0, "ステージで BGM/効果音が鳴っている");
         /* 自動プレイで 30 秒 */

@@ -201,6 +201,8 @@ typedef struct {
     u16 deaths;
     u8 hud_dirty;
     u8 easy;      /* 1 = EASY (HP/残機が多い) */
+    u32 stage_time; /* ステージ経過フレーム */
+    u32 total_time; /* 全体の経過フレーム */
 } Game;
 #define START_LIVES (game.easy ? 5 : 3)
 extern Game game;
