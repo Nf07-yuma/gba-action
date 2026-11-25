@@ -248,6 +248,9 @@ typedef struct {
     u32 lift_count;
     s32 lifts[8]; /* x,y x4 */
     u32 obj_tiles; /* 使用中の OBJ タイル数 (1024 以下であること) */
+    u32 lag_frames;  /* 処理が 1 フレームに収まらなかった回数 */
+    u32 max_lines;   /* 1 フレームの処理に使った最大走査線数 (228 で 1 フレーム) */
+    u32 max_state, lag_state; /* 発生時の画面状態 | (経過フレーム << 8) */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u
