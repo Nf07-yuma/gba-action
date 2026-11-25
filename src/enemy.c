@@ -36,7 +36,7 @@ static const s8 sin64[64] = {
 
 static int is_enemy(int type) {
     return type == OBJ_CRAWLER || type == OBJ_DRONE || type == OBJ_TURRET || type == OBJ_JUMPER || type == OBJ_SHIELD ||
-           type == OBJ_MINE || type == OBJ_LASER;
+           type == OBJ_MINE || type == OBJ_LASER || type == OBJ_BOMBER;
 }
 
 void enemies_reset(int full) {
@@ -69,6 +69,7 @@ static void ent_init(Ent* e, int type, int px, int py) {
     case OBJ_SHIELD:  w = 10; h = 15; e->hp = 4; break;
     case OBJ_MINE:    w = 12; h = 12; e->hp = 1; break;
     case OBJ_LASER:   w = 12; h = 12; e->hp = 3; break;
+    case OBJ_BOMBER:  w = 14; h = 10; e->hp = 3; e->cool = 40; break;
     case OBJ_CHECKPOINT: w = 8; h = 16; break;
     case OBJ_GOAL:    w = 18; h = 30; break;
     case OBJ_HEAL:    w = 8; h = 8; break;
@@ -79,7 +80,7 @@ static void ent_init(Ent* e, int type, int px, int py) {
     e->b.h = (s16)h;
     e->b.x = TO_FP(px - w / 2);
     e->b.y = TO_FP(py - h);
-    if (type == OBJ_DRONE || type == OBJ_MINE) e->b.y = TO_FP(py - h - 4);
+    if (type == OBJ_DRONE || type == OBJ_MINE || type == OBJ_BOMBER) e->b.y = TO_FP(py - h - 4);
     /* 足場の上面は配置したセルの下端 (= 隣の地面と同じ高さ) */
     if (type == OBJ_LIFT_H || type == OBJ_LIFT_V) e->b.y = TO_FP(py);
     e->ax = px;
@@ -185,7 +186,7 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop, int pierce) {
     if (e->type != OBJ_TURRET && e->type != OBJ_MINE && e->type != OBJ_LASER) {
         e->b.vx = dir * kbx;
         e->b.vy = kby;
-        if (e->type == OBJ_DRONE) e->b.vy = kby / 2;
+        if (e->type == OBJ_DRONE || e->type == OBJ_BOMBER) e->b.vy = kby / 2;
     }
     game.hitstop = (u16)stop;
     player.hit_any = 1;
@@ -211,6 +212,41 @@ static void mine_explode(Ent* e) {
     shake_t = 6;
     shake_amp = 2;
     ent_free(e, 1);
+}
+
+void bomb_drop(s32 x, s32 y, s32 vx);
+
+/* 爆撃ドローン: 一定の高さを保ったままプレイヤーの真上へ寄ってきて爆弾を落とす */
+static void update_bomber(Ent* e) {
+    int dx = player_cx() - px_center(e);
+    if (e->hitstun) {
+        e->b.vx = e->b.vx * 7 / 8;
+        e->b.vy = e->b.vy * 7 / 8;
+        e->b.x += e->b.vx;
+        e->b.y += e->b.vy;
+        return;
+    }
+    /* 横: プレイヤーへ向けて加速 (行き過ぎてから折り返すので真上で止まらない) */
+    s32 want = dx > 0 ? 0x130 : -0x130;
+    /* 出現地点から左右 112px までしか追わない (足場渡りの区間まで付いてこない) */
+    int home = px_center(e) - e->ax;
+    if ((home > 112 && want > 0) || (home < -112 && want < 0)) want = -want;
+    if (e->b.vx < want) e->b.vx += 0x0C;
+    else if (e->b.vx > want) e->b.vx -= 0x0C;
+    e->dir = e->b.vx > 0 ? 1 : -1;
+    /* 縦: 出現時の高さへ戻りつつゆっくり上下 */
+    s32 ty = TO_FP(e->ay + sin64[(e->t * 2) & 63] / 16);
+    e->b.y += (ty - e->b.y) / 16;
+    e->b.x += e->b.vx;
+    if (e->cool) e->cool--;
+    int dy = player_cy() - py_center(e);
+    if (!e->cool && ABS(dx) < 14 && dy > 8 && dy < 140) {
+        bomb_drop(TO_FP(px_center(e)), TO_FP(FROM_FP(e->b.y) + e->b.h + 2), e->b.vx / 2);
+        sfx_play(SFX_SHOT);
+        e->cool = game.hard ? 50 : 70;
+        e->state = 6; /* 投下の反動表示 */
+    }
+    if (e->state) e->state--;
 }
 
 static void update_mine(Ent* e) {
@@ -505,10 +541,11 @@ void enemies_update(void) {
         case OBJ_SHIELD:  update_shield(e); break;
         case OBJ_MINE:    update_mine(e); break;
         case OBJ_LASER:   update_laser(e); break;
+        case OBJ_BOMBER:  update_bomber(e); break;
         }
         if (!e->active) continue;
         /* トゲに落ちたら壊れる */
-        if (e->type != OBJ_DRONE && e->type != OBJ_MINE && e->type != OBJ_LASER && body_touch_hazard(&e->b)) {
+        if (e->type != OBJ_DRONE && e->type != OBJ_MINE && e->type != OBJ_LASER && e->type != OBJ_BOMBER && body_touch_hazard(&e->b)) {
             enemy_die(e);
             continue;
         }
@@ -568,6 +605,11 @@ void enemies_draw(void) {
             oam_put(spr, cx - 8, bot - 14 + bob, flip, pal, 2);
             break;
         }
+        case OBJ_BOMBER:
+            /* プロペラ 2 コマ, 投下の瞬間に機体が少し浮く */
+            spr = SPR_BOMBER0 + ((e->t >> 1) & 1);
+            oam_put(spr, cx - 8, bot - 13 - (e->state > 0), flip, pal, 2);
+            break;
         case OBJ_TURRET:
             /* 発射時に砲身が反動で下がる */
             spr = e->state ? SPR_TURRET1 : SPR_TURRET0;
@@ -628,7 +670,7 @@ void enemies_draw(void) {
 /* ---- 弾 ---- */
 typedef struct {
     u8 active;
-    u8 kind;  /* 0=弾, 1=衝撃波 */
+    u8 kind;  /* 0=弾, 1=衝撃波, 2=爆弾 (重力で落ち、着地で爆発) */
     u16 life;
     s32 x, y, vx, vy;
 } Bullet;
@@ -653,6 +695,33 @@ void bullet_fire(s32 x, s32 y, s32 vx, s32 vy) {
     }
 }
 
+void bomb_drop(s32 x, s32 y, s32 vx) {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (bullets[i].active) continue;
+        Bullet* b = &bullets[i];
+        b->active = 1;
+        b->life = 200;
+        b->x = x;
+        b->y = y;
+        b->vx = vx;
+        b->vy = 0x40;
+        b->kind = 2;
+        return;
+    }
+}
+
+/* 爆弾の着弾: 爆風 (半径 20px) に入っていたらダメージ */
+static void bomb_explode(int x, int y) {
+    fx_spawn(FX_BOOM, x - 8, y - 12, 0);
+    fx_spawn(FX_DUST, x - 12, y - 6, 0);
+    fx_spawn(FX_DUST, x + 4, y - 6, 1);
+    sfx_play(SFX_BOOM);
+    shake_t = 4;
+    shake_amp = 1;
+    int pcx = FROM_FP(player.b.x) + player.b.w / 2, pcy = FROM_FP(player.b.y) + player.b.h / 2;
+    if (ABS(pcx - x) < 20 && ABS(pcy - (y - 8)) < 22) player_damage(1, x);
+}
+
 void wave_fire(s32 x, s32 y, s32 vx) {
     bullet_fire(x, y, vx, 0);
     for (int i = MAX_BULLETS - 1; i >= 0; i--)
@@ -670,9 +739,18 @@ void bullets_update(void) {
     for (int i = 0; i < MAX_BULLETS; i++) {
         Bullet* b = &bullets[i];
         if (!b->active) continue;
+        if (b->kind == 2 && b->vy < 0x300) b->vy += 0x14; /* 爆弾は重力で加速 */
         b->x += b->vx;
         b->y += b->vy;
         int x = FROM_FP(b->x), y = FROM_FP(b->y);
+        if (b->kind == 2) {
+            int c = level_cell(x >> 4, (y + 3) >> 4);
+            if (c == CELL_SOLID || c == CELL_ONEWAY || c == CELL_HAZARD) {
+                bomb_explode(x, (y + 3) & ~15);
+                b->active = 0;
+                continue;
+            }
+        }
         if (--b->life == 0 || level_solid(x >> 4, y >> 4) || x < cam_x - 16 || x > cam_x + SCREEN_W + 16) {
             if (b->kind == 1 && b->life) fx_spawn(FX_DUST, x - 4, y, 0);
             if (b->life) fx_spawn(FX_SPARK, x - 4, y - 4, 0);
@@ -685,7 +763,7 @@ void bullets_update(void) {
             for (int k = 0; k < MAX_PWAVE; k++) {
                 int wx0, wy0, wx1, wy1;
                 u8 wid;
-                if (b->kind == 0 && player_wave_box(k, &wx0, &wy0, &wx1, &wy1, &wid) &&
+                if (b->kind != 1 && player_wave_box(k, &wx0, &wy0, &wx1, &wy1, &wid) &&
                     overlap(wx0, wy0, wx1, wy1, x - 3, y - 3, x + 3, y + 3))
                     hitw = 1;
             }
@@ -696,7 +774,7 @@ void bullets_update(void) {
             }
         }
         /* 斬撃で弾を消せる (衝撃波は不可) */
-        if (b->kind == 0 && atk && overlap(ax0, ay0, ax1, ay1, x - 3, y - 3, x + 3, y + 3)) {
+        if (b->kind != 1 && atk && overlap(ax0, ay0, ax1, ay1, x - 3, y - 3, x + 3, y + 3)) {
             fx_spawn(FX_SPARK, x - 4, y - 4, 0);
             sfx_play(SFX_HIT);
             game_add_chain(1);
@@ -717,7 +795,9 @@ void bullets_draw(void) {
     for (int i = 0; i < MAX_BULLETS; i++) {
         Bullet* b = &bullets[i];
         if (!b->active) continue;
-        if (b->kind == 1)
+        if (b->kind == 2)
+            oam_put(SPR_BOMB, FROM_FP(b->x) - 4 - cam_x, FROM_FP(b->y) - 4 - cam_y, 0, OBJPAL_NORMAL, 1);
+        else if (b->kind == 1)
             oam_put(SPR_WAVE0 + ((b->life >> 2) & 1), FROM_FP(b->x) - 8 - cam_x, FROM_FP(b->y) - 8 - cam_y, b->vx > 0, OBJPAL_NORMAL, 1);
         else
             oam_put(SPR_BULLET, FROM_FP(b->x) - 4 - cam_x, FROM_FP(b->y) - 4 - cam_y, 0, OBJPAL_NORMAL, 1);
