@@ -102,6 +102,7 @@ void game_add_chain(int hits) {
     }
     game.chain_t = 120;
     if (game.chain > game.chain_best) game.chain_best = game.chain;
+    if (game.chain > game.stage_chain_best) game.stage_chain_best = game.chain;
     game_add_score(10u * MIN(game.chain, 50));
 }
 
@@ -132,6 +133,7 @@ void game_boss_defeated(int x, int y) {
 
 void game_on_player_dead(void) {
     game.deaths++;
+    game.stage_deaths++;
     game_set_state(GS_DEAD);
 }
 
@@ -143,7 +145,10 @@ static void stage_begin(int respawn) {
         game.checkpoint_x = level.def->spawn_x * CELL + CELL / 2;
         game.checkpoint_y = (level.def->spawn_y + 1) * CELL;
         stage_start_score = game.score;
+        bg_dim = 0;
         game.stage_time = 0;
+        game.stage_chain_best = 0;
+        game.stage_deaths = 0;
     } else {
         enemies_reset(0);
     }
@@ -345,9 +350,24 @@ static void clear_update(void) {
         game_add_score(tbonus + game.chain_best * 100u + (u32)MAX(0, player.hp) * 200u);
         g_debug.clears++;
     }
+    if (t == 110) {
+        /* ランク評価: タイム・ステージ内最大 CHAIN・ミス回数・残り HP の合計点 (0-7) */
+        u32 sec = game.stage_time / 60;
+        int pts = (sec < 100 ? 2 : sec < 160 ? 1 : 0) + (game.stage_chain_best >= 25 ? 2 : game.stage_chain_best >= 10 ? 1 : 0) +
+                  (game.stage_deaths == 0 ? 2 : game.stage_deaths == 1 ? 1 : 0) + (player.hp >= player.hp_max / 2 ? 1 : 0);
+        static const char ranks[] = "CBAS";
+        int r = pts >= 6 ? 3 : pts >= 4 ? 2 : pts >= 2 ? 1 : 0;
+        char buf[12] = "RANK  ?";
+        buf[6] = ranks[r];
+        text_put_center(16, buf, r >= 2 ? BGPAL_HUD_Y : BGPAL_HUD);
+        sfx_play(r == 3 ? SFX_CHARGE : SFX_CHECK);
+        g_debug.rank = (u32)r;
+        g_debug.rank_hist |= (u32)(r + 1) << (game.stage * 4);
+    }
+    if (bg_dim < 12 && (t & 1)) bg_dim++;
     level_scroll_update();
-    draw_world();
-    if (t > 220 || (t > 100 && key_hit(KEY_START | KEY_A))) {
+    oam_begin(); /* 集計中はスプライトを消して文字を読みやすく */
+    if (t > 240 || (t > 120 && key_hit(KEY_START | KEY_A))) {
         if (game.stage + 1 < LEVEL_COUNT) {
             game.stage++;
             game_set_state(GS_STAGE_INTRO);

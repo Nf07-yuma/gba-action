@@ -86,13 +86,13 @@ void fx_update(void) {
     }
 }
 
-/* 背景 (BG2/BG3) を暗くする度合い 0-16。スタッフロールで文字を読みやすくする */
+/* 背景 (BG1-3) を暗くする度合い 0-16。スタッフロールやクリア集計で文字を読みやすくする */
 u8 bg_dim;
 
 /* VBlank 中に呼ぶ: フラッシュの反映 */
 void fx_flash_apply(void) {
     if (bg_dim) {
-        REG_BLDCNT = 0x00CC;  /* BG2/BG3 を輝度低下 */
+        REG_BLDCNT = 0x00CE;  /* BG1/BG2/BG3 を輝度低下 (文字の BG0 とスプライトはそのまま) */
         REG_BLDY = bg_dim;
     } else if (flash_t) {
         REG_BLDCNT = 0x00BF;  /* 全レイヤー + 背景色を輝度上昇 */
