@@ -116,8 +116,9 @@ def stage3():
                     [(0, 4), (8, 12), (17, 23)]))
     c[-1] = [r[:5] + ("^^^" if i >= G else r[5:8]) + r[8:13] + ("^^^^" if i >= G else r[13:17]) + r[17:] for i, r in enumerate(c[-1])]
     c.append(indoor(20, {9: ["@3:###", "@10:s", "@15:j"], 8: "@3:###", 7: "@4:t"}))
-    c.append(indoor(14, {3: "@3:wwwww", 4: "@3:ppppp", 5: "@3:ppppp", 6: "@3:ppppp", 7: "@3:ppppp", 8: "@3:ppppp",
-                         9: "@3:ppGpp"}))
+    c.append(indoor(12, {9: ["@4:C", "@8:+"], 5: "@3:bwwbbwwb"}))
+    # ボス闘技場 (末尾 15 マスでカメラ固定)
+    c.append(indoor(19, {4: "@6:bwwbbwwb", 9: "@14:B"}))
     save("stage3.txt", "SECTOR 3  CORE FOUNDRY", 2, H, c)
 
 

@@ -139,6 +139,40 @@ def gate(frame):
     return p
 
 
+def shockwave(frame):
+    """地を這う衝撃波 16x16"""
+    p = canvas(16, 16)
+    for y in range(4, 16):
+        for x in range(16):
+            h = 12 - abs(x - 8) * (1.4 if frame == 0 else 1.1)
+            top = 16 - h
+            if y >= top:
+                d = y - top
+                p[y][x] = I["W"] if d < 1.5 else (I["y"] if d < 4 else I["o"])
+                if (x + y + frame) % 3 == 0 and d >= 4:
+                    p[y][x] = I["r"]
+    return p
+
+
+def debris(frame):
+    """機械の破片 8x8 (回転 2 コマ)"""
+    p = canvas(8, 8)
+    pts = [(2, 2), (3, 2), (4, 3), (5, 4), (4, 5), (3, 5), (2, 4), (3, 3), (3, 4), (4, 4)] if frame == 0 else \
+          [(2, 4), (3, 3), (4, 2), (5, 2), (5, 3), (4, 4), (3, 5), (4, 3), (3, 4)]
+    for (x, y) in pts:
+        p[y][x] = I["G"]
+    p[pts[0][1]][pts[0][0]] = I["h"]
+    p[pts[3][1]][pts[3][0]] = I["o"]
+    # 輪郭
+    q = [r[:] for r in p]
+    for y in range(8):
+        for x in range(8):
+            if not p[y][x] and any(0 <= x + dx < 8 and 0 <= y + dy < 8 and p[y + dy][x + dx]
+                                   for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                q[y][x] = I["k"]
+    return q
+
+
 def main():
     S = {}
     # 斬撃 (32x32, プレイヤー前方に置く。右向き基準)
@@ -158,6 +192,10 @@ def main():
         S[f"dust{i}"] = dust(i)
     for i in range(2):
         S[f"gate{i}"] = gate(i)
+    for i in range(2):
+        S[f"wave{i}"] = shockwave(i)
+    for i in range(2):
+        S[f"debris{i}"] = debris(i)
     out = ["# 自動生成: tools/compose_fx.py"]
     for name, p in S.items():
         out.append(f"@{name} {len(p[0])} {len(p)}")

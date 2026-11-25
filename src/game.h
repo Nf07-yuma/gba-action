@@ -6,7 +6,7 @@
 #include "assets.h"
 
 #define FP 8
-#define TO_FP(x)   ((s32)(x) << FP)
+#define TO_FP(x)   ((s32)(x) * (1 << FP))
 #define FROM_FP(x) ((s32)(x) >> FP)
 #define CELL 16
 #define SCREEN_W 240
@@ -48,6 +48,7 @@ void oam_begin(void);
 void oam_end(void);
 /* 画面座標に描画。flip: 左右反転, pal: OBJPAL_*, prio: 0-3 */
 void oam_put(int spr, int x, int y, int flip, int pal, int prio);
+void oam_put_blend(int spr, int x, int y, int flip, int pal, int prio);
 void vsync(void);
 
 /* ---- テキスト (BG0) ---- */
@@ -137,8 +138,24 @@ void items_clear(void);
 void items_update(void);
 void items_draw(void);
 
+/* ---- boss.c ---- */
+extern s32 boss_lock_x;
+void boss_reset(void);
+int boss_check_start(int spawn_cx, int spawn_cy);
+void boss_update(void);
+void boss_draw(void);
+void boss_hud(void);
+int boss_active(void);
+int boss_hp(void);
+int boss_state_id(void);
+int boss_x(void);
+void wave_fire(s32 x, s32 y, s32 vx);
+
 /* ---- fx.c ---- */
-enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH };
+enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH, FX_DEBRIS };
+void fx_debris(int x, int y, int n);
+void screen_flash(int frames);
+void fx_flash_apply(void);
 void fx_clear(void);
 void fx_spawn(int type, int x, int y, int flip);
 void fx_spawn_slash(int spr0, int x, int y, int flip);
@@ -169,6 +186,7 @@ void game_add_score(u32 pts);
 void game_set_checkpoint(s32 x, s32 y);
 void game_stage_clear(void);
 void game_on_player_dead(void);
+void game_boss_defeated(int x, int y);
 void hud_draw(int force);
 
 /* ---- sound.c ---- */
@@ -200,6 +218,11 @@ typedef struct {
     u32 level_w, level_h;
     s32 vy;
     u32 on_ground;
+    s32 boss_hp;
+    u32 boss_state;
+    s32 boss_x;
+    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg) */
+    u32 cmd_arg;
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

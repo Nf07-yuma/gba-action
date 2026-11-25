@@ -79,6 +79,13 @@ void oam_put(int spr, int x, int y, int flip, int pal, int prio) {
     o->attr2 = ATTR2_TILE(sprite_tile_base[spr]) | ATTR2_PRIO(prio) | ATTR2_PAL(pal);
 }
 
+/* 半透明で描画 (BLDCNT の第2対象とアルファ合成) */
+void oam_put_blend(int spr, int x, int y, int flip, int pal, int prio) {
+    int before = oam_count;
+    oam_put(spr, x, y, flip, pal, prio);
+    if (oam_count > before) oam_buf[before].attr0 |= ATTR0_BLEND;
+}
+
 /* ---- テキスト (BG0, 32x32 マップ) ---- */
 void text_clear(void) { dma3_fill32(SCREENBLOCK(SBB_HUD), 0, 0x800 / 4); }
 

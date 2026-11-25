@@ -101,7 +101,10 @@ void enemies_spawn_check(void) {
         if (o->x < l) continue;
         if (o->x > r) break;
         if (obj_flag[i] & (OF_SPAWNED | OF_DEAD)) continue;
-        if (o->type == OBJ_BOSS) continue;
+        if (o->type == OBJ_BOSS) {
+            if (boss_check_start(o->x, o->y)) obj_flag[i] |= OF_SPAWNED;
+            continue;
+        }
         Ent* e = ent_alloc();
         if (!e) return;
         ent_init(e, o->type, o->x * CELL + CELL / 2, (o->y + 1) * CELL);
@@ -135,6 +138,7 @@ static int body_overlap(const Body* a, const Body* b) {
 static void enemy_die(Ent* e) {
     int cx = px_center(e), cy = py_center(e);
     fx_spawn(FX_BOOM, cx - 8, cy - 8, 0);
+    fx_debris(cx, cy, 5);
     sfx_play(SFX_BOOM);
     shake_t = 6;
     shake_amp = 2;
@@ -171,6 +175,7 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop) {
     if (stop >= 6) {
         shake_t = 6;
         shake_amp = 2;
+        screen_flash(2);
     }
     if (e->hp <= 0) enemy_die(e);
 }
@@ -304,8 +309,11 @@ static void update_prop(Ent* e) {
         }
         break;
     case OBJ_GOAL:
-        if (player.state != PS_DEAD && player.state != PS_CLEAR && body_overlap(&e->b, &player.b)) {
-            game_stage_clear();
+        /* ゲートの列を通過すれば高さに関係なく反応 (飛び越し対策) */
+        if (player.state != PS_DEAD && player.state != PS_CLEAR) {
+            int gx = FROM_FP(e->b.x), px = FROM_FP(player.b.x);
+            if (px < gx + e->b.w && gx < px + player.b.w && FROM_FP(player.b.y) < FROM_FP(e->b.y) + e->b.h)
+                game_stage_clear();
         }
         break;
     case OBJ_HEAL:
@@ -410,6 +418,7 @@ void enemies_draw(void) {
 /* ---- 弾 ---- */
 typedef struct {
     u8 active;
+    u8 kind;  /* 0=弾, 1=衝撃波 */
     u16 life;
     s32 x, y, vx, vy;
 } Bullet;
@@ -428,8 +437,19 @@ void bullet_fire(s32 x, s32 y, s32 vx, s32 vy) {
         b->y = y;
         b->vx = vx;
         b->vy = vy;
+        b->kind = 0;
         return;
     }
+}
+
+void wave_fire(s32 x, s32 y, s32 vx) {
+    bullet_fire(x, y, vx, 0);
+    for (int i = MAX_BULLETS - 1; i >= 0; i--)
+        if (bullets[i].active && bullets[i].x == x && bullets[i].y == y && bullets[i].vx == vx) {
+            bullets[i].kind = 1;
+            bullets[i].life = 150;
+            break;
+        }
 }
 
 void bullets_update(void) {
@@ -443,12 +463,13 @@ void bullets_update(void) {
         b->y += b->vy;
         int x = FROM_FP(b->x), y = FROM_FP(b->y);
         if (--b->life == 0 || level_solid(x >> 4, y >> 4) || x < cam_x - 16 || x > cam_x + SCREEN_W + 16) {
+            if (b->kind == 1 && b->life) fx_spawn(FX_DUST, x - 4, y, 0);
             if (b->life) fx_spawn(FX_SPARK, x - 4, y - 4, 0);
             b->active = 0;
             continue;
         }
-        /* 斬撃で弾を消せる */
-        if (atk && overlap(ax0, ay0, ax1, ay1, x - 3, y - 3, x + 3, y + 3)) {
+        /* 斬撃で弾を消せる (衝撃波は不可) */
+        if (b->kind == 0 && atk && overlap(ax0, ay0, ax1, ay1, x - 3, y - 3, x + 3, y + 3)) {
             fx_spawn(FX_SPARK, x - 4, y - 4, 0);
             sfx_play(SFX_HIT);
             game_add_chain(1);
@@ -456,7 +477,9 @@ void bullets_update(void) {
             b->active = 0;
             continue;
         }
-        if (overlap(px + 1, py + 2, px + player.b.w - 1, py + player.b.h, x - 2, y - 2, x + 2, y + 2)) {
+        int r = b->kind == 1 ? 6 : 2;
+        int top = b->kind == 1 ? y - 2 : y - 2;
+        if (overlap(px + 1, py + 2, px + player.b.w - 1, py + player.b.h, x - r, top, x + r, y + (b->kind == 1 ? 8 : 2))) {
             player_damage(1, x);
             b->active = 0;
         }
@@ -467,6 +490,9 @@ void bullets_draw(void) {
     for (int i = 0; i < MAX_BULLETS; i++) {
         Bullet* b = &bullets[i];
         if (!b->active) continue;
-        oam_put(SPR_BULLET, FROM_FP(b->x) - 4 - cam_x, FROM_FP(b->y) - 4 - cam_y, 0, OBJPAL_NORMAL, 1);
+        if (b->kind == 1)
+            oam_put(SPR_WAVE0 + ((b->life >> 2) & 1), FROM_FP(b->x) - 8 - cam_x, FROM_FP(b->y) - 8 - cam_y, b->vx > 0, OBJPAL_NORMAL, 1);
+        else
+            oam_put(SPR_BULLET, FROM_FP(b->x) - 4 - cam_x, FROM_FP(b->y) - 4 - cam_y, 0, OBJPAL_NORMAL, 1);
     }
 }

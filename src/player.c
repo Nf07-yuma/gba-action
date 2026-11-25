@@ -36,7 +36,7 @@ static const AtkDef atk_defs[4] = {
     /* len act0 act1 chain  bx   by  bw  bh dmg  kbx     kby   stop spr                fx              fxx fxy lunge  sfx */
     { 17, 2, 6, 6,    -2, -8, 32, 32, 1, 0x180, -0x100, 3, SPR_PLAYER_ATK1, SPR_SLASH1_0, 2, -6, 0x160, SFX_SLASH },
     { 17, 2, 6, 6,    -2, -20, 30, 44, 1, 0x0C0, -0x3C0, 3, SPR_PLAYER_ATK2, SPR_SLASH2_0, 2, -12, 0x120, SFX_SLASH },
-    { 26, 4, 9, 0,    -2, -14, 36, 44, 3, 0x440, -0x2C0, 7, SPR_PLAYER_ATK3, SPR_SLASH3_0, 4, -6, 0x2C0, SFX_SLASH3 },
+    { 26, 4, 9, 0,    -2, -14, 36, 44, 3, 0x440, -0x2C0, 7, SPR_PLAYER_ATK3, SPR_SLASH3_0, 4, -6, 0x200, SFX_SLASH3 },
     { 20, 2, 10, 0,  -21, -10, 42, 42, 1, 0x200, -0x200, 3, SPR_PLAYER_AIRATK, SPR_SLASHAIR_0, -11, -10, 0, SFX_SLASH },
 };
 
@@ -373,8 +373,8 @@ void player_draw(void) {
     if (p->state == PS_DASH) {
         for (int i = 0; i < 3; i++) {
             if ((p->anim_t + i) & 1) continue;
-            oam_put(SPR_PLAYER_DASH, FROM_FP(ghost_x[i]) + PW / 2 - 16 - cam_x, FROM_FP(ghost_y[i]) + PH - 31 - cam_y,
-                    flip, OBJPAL_GHOST, 2);
+            oam_put_blend(SPR_PLAYER_DASH, FROM_FP(ghost_x[i]) + PW / 2 - 16 - cam_x,
+                          FROM_FP(ghost_y[i]) + PH - 31 - cam_y, flip, OBJPAL_GHOST, 2);
         }
     }
 }
