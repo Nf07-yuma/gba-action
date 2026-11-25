@@ -174,6 +174,9 @@ static void boss_apply_hit(int ax0, int ay0, int ax1, int ay1, int dmg, int stop
         screen_flash(6);
         game_add_score(5000);
         game.kills++;
+        /* とどめの一撃: 一瞬止めてからスローモーション */
+        game.hitstop = 16;
+        game.slowmo = 90;
     }
 }
 

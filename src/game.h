@@ -199,6 +199,7 @@ typedef struct {
     u16 chain_t;
     u16 chain_best;
     u16 hitstop;
+    u16 slowmo;   /* ボス撃破時のスローモーション残りフレーム (この間は 2 フレームに 1 回だけ進む) */
     u32 frame;
     u32 state_t;
     s32 checkpoint_x, checkpoint_y;
