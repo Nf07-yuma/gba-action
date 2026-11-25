@@ -553,6 +553,31 @@ int main(int argc, char** argv) {
         print_debug("after bot");
         read_debug(&d);
         check(d.kills > 0 || d.score > 0, "敵を倒せる/スコアが入る");
+    } else if (strncmp(scenario, "demo", 4) == 0) {
+        /* demoS_X: ステージ S の X からボットでプレイし、3 フレームごとに連番 PNG を保存 (GIF 用) */
+        int st = atoi(scenario + 4) - 1;
+        const char* us = strchr(scenario, '_');
+        int x = us ? atoi(us + 1) : 0;
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), st);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
+        run(30, 0);
+        wait_state(GS_PLAY, 400);
+        if (x) {
+            core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), x);
+            core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
+            run(40, 0);
+        }
+        read_debug(&d);
+        DebugInfo prev = d;
+        int stuck = 0;
+        for (int t = 0; t < 600; t++) {
+            bot_step(t, &prev, &stuck);
+            if (t % 3 == 0) {
+                char nm[64];
+                snprintf(nm, sizeof(nm), "frame_%04d", t / 3);
+                screenshot(nm);
+            }
+        }
     } else if (strncmp(scenario, "view", 4) == 0) {
         /* viewS_X: ステージ S の X ピクセル付近を撮影 (見た目確認用) */
         int st = atoi(scenario + 4) - 1;

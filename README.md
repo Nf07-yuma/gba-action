@@ -6,6 +6,16 @@
 > 機械に支配された工業都市。小型戦闘ロボ **STEEL** はエネルギーブレードを手に、
 > 中枢コアを目指して工場区画を駆け抜ける——。
 
+<p align="center"><img src="docs/images/demo_stage1.gif" width="480" alt="プレイ映像"></p>
+
+| | |
+| --- | --- |
+| ![タイトル](docs/images/title.png) | ![ステージ2 スカイウェイ](docs/images/stage2.png) |
+| ![ボス GUARDIAN](docs/images/boss1.png) | ![ステージ4 データハイウェイ](docs/images/stage4.png) |
+| ![最終ボス OVERLORD CORE](docs/images/lastboss.png) | ![エンディング](docs/images/ending.png) |
+
+（画像はすべて CI と同じヘッドレスランナーで実機ROMを動かして撮影したもの。`build/runner steel_chain.gba <出力先> demo1_0` で連番フレームを書き出せます）
+
 ## 遊び方
 
 最新の ROM は [Releases](../../releases) から `steel_chain-build-*.gba` をダウンロードし、
