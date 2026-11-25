@@ -136,6 +136,13 @@ void title_update(void) {
             if (!save_reached) buf[8] = buf[9] = ' ';
             if (save_rank[title_cursor]) buf[16] = "CBAS"[save_rank[title_cursor] - 1];
             text_put_center(11, buf, title_cursor ? BGPAL_HUD_Y : BGPAL_HUD);
+            /* そのステージのベストタイム */
+            if (save_best_time[title_cursor]) {
+                text_put(10, 12, "TIME", BGPAL_HUD_C);
+                text_time(15, 12, save_best_time[title_cursor], BGPAL_HUD);
+            } else {
+                text_put(10, 12, "          ", BGPAL_HUD);
+            }
         }
         text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
     }
