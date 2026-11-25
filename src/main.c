@@ -188,6 +188,37 @@ static void title_update(void) {
     }
 }
 
+/* ステージ開始時の司令部からの通信 (各 2 行, 28 文字以内) */
+static const char* const stage_msg[5][2] = {
+    {"HQ: FACTORY GATE IS OVERRUN.", "HOLD B TO CHARGE A SLASH."},
+    {"HQ: TAKE THE SKYWAY ROUTE.", "WATCH YOUR STEP UP THERE."},
+    {"HQ: A HEAVY GUARD UNIT IS", "WAITING IN THE FOUNDRY."},
+    {"HQ: DATA HIGHWAY AHEAD.", "RIDE THE LIFTS ACROSS."},
+    {"HQ: THIS IS IT, STEEL.", "SILENCE THE OVERLORD CORE."},
+};
+#define INTRO_LEN 190
+
+/* 1 文字ずつ表示 (タイプライター) */
+static void intro_message(u32 t) {
+    if (t < 24) return;
+    u32 n = (t - 24) / 2;
+    const char* const* m = stage_msg[game.stage < 5 ? game.stage : 0];
+    for (int line = 0; line < 2; line++) {
+        const char* s = m[line];
+        int len = 0;
+        while (s[len]) len++;
+        int show = (int)n - (line ? 30 : 0);
+        if (show < 0) break;
+        if (show > len) show = len;
+        if (show == len && (int)n - (line ? 30 : 0) > len) continue;
+        char buf[32];
+        for (int i = 0; i < show; i++) buf[i] = s[i];
+        buf[show] = 0;
+        text_put(1, 15 + line * 2, buf, line ? BGPAL_HUD : BGPAL_HUD_C);
+        if (show < len && (t & 3) == 0 && s[show - 1 >= 0 ? show - 1 : 0] != ' ') sfx_play(SFX_SELECT);
+    }
+}
+
 static void intro_update(void) {
     if (game.state_t == 1) {
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_OBJ;
@@ -201,13 +232,13 @@ static void intro_update(void) {
         text_put_center(7, buf, BGPAL_HUD_Y);
         text_put_center(9, level.def->name, BGPAL_HUD);
         text_put_center(12, "READY", BGPAL_HUD_C);
+        text_fill(0, 14, 30, 5, HUD_TILE_SOLID_DARK, BGPAL_HUD);
     }
+    intro_message(game.state_t);
     level_scroll_update();
     draw_world();
-    if (game.state_t > 100 || (game.state_t > 20 && key_hit(KEY_START))) {
-        text_put(0, 7, "                              ", BGPAL_HUD);
-        text_put(0, 9, "                              ", BGPAL_HUD);
-        text_put(0, 12, "                              ", BGPAL_HUD);
+    if (game.state_t > INTRO_LEN || (game.state_t > 20 && key_hit(KEY_START))) {
+        for (int y = 7; y < 19; y++) text_put(0, y, "                              ", BGPAL_HUD);
         set_state(GS_PLAY);
     }
 }
