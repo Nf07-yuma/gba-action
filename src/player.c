@@ -42,6 +42,69 @@ static const AtkDef atk_defs[4] = {
 
 static s32 ghost_x[3], ghost_y[3];
 
+/* ---- チャージ斬りの斬撃波 ---- */
+typedef struct {
+    u8 active, id, t;
+    s8 dir;
+    s32 x, y; /* 中心 (固定小数) */
+} PWave;
+static PWave pwaves[MAX_PWAVE];
+static u8 pwave_seq;
+
+void player_waves_clear(void) { memset(pwaves, 0, sizeof(pwaves)); }
+
+static void pwave_fire(void) {
+    for (int i = 0; i < MAX_PWAVE; i++) {
+        PWave* w = &pwaves[i];
+        if (w->active) continue;
+        w->active = 1;
+        w->t = 0;
+        w->dir = player.dir;
+        w->id = (u8)(0xF0 | (pwave_seq++ & 0x0F));
+        w->x = player.b.x + TO_FP(PW / 2 + player.dir * 14);
+        w->y = player.b.y + TO_FP(PH / 2 - 2);
+        return;
+    }
+}
+
+int player_wave_box(int k, int* x0, int* y0, int* x1, int* y1, u8* id) {
+    PWave* w = &pwaves[k];
+    if (!w->active) return 0;
+    int cx = FROM_FP(w->x), cy = FROM_FP(w->y);
+    *x0 = cx - 12;
+    *x1 = cx + 12;
+    *y0 = cy - 16;
+    *y1 = cy + 16;
+    *id = w->id;
+    return 1;
+}
+
+static void pwaves_update(void) {
+    for (int i = 0; i < MAX_PWAVE; i++) {
+        PWave* w = &pwaves[i];
+        if (!w->active) continue;
+        w->t++;
+        w->x += w->dir * 0x380;
+        int cx = FROM_FP(w->x), cy = FROM_FP(w->y);
+        if (w->t > 40 || level_solid((cx + w->dir * 10) >> 4, cy >> 4)) {
+            fx_spawn(FX_SPARK, cx - 4, cy - 4, 0);
+            w->active = 0;
+        } else if ((w->t & 3) == 0) {
+            fx_spawn(FX_DUST, cx - 4 - w->dir * 8, cy + 6, w->dir < 0);
+        }
+    }
+}
+
+static void pwaves_draw(void) {
+    for (int i = 0; i < MAX_PWAVE; i++) {
+        PWave* w = &pwaves[i];
+        if (!w->active) continue;
+        int sx = FROM_FP(w->x) - cam_x, sy = FROM_FP(w->y) - cam_y;
+        int spr = (w->t & 2) ? SPR_SLASH1_0 : SPR_SLASH1_1;
+        oam_put(spr, w->dir > 0 ? sx - 14 : sx - 18, sy - 18, w->dir < 0, OBJPAL_NORMAL, 1);
+    }
+}
+
 void player_init(s32 x, s32 y) {
     memset(&player, 0, sizeof(player));
     player.b.w = PW;
@@ -65,6 +128,7 @@ static void start_attack(int step) {
     player.atk_t = 0;
     player.queued = 0;
     player.attack_id++;
+    if (player.attack_id >= 0xF0) player.attack_id = 1; /* 0xF0- は斬撃波用 */
     player.hit_any = 0;
     if (player.attack_id == 0) player.attack_id = 1;
     if (step < 3) {
@@ -206,6 +270,25 @@ void player_update(void) {
         p->air_attacks = 0;
     } else if (p->coyote) {
         p->coyote--;
+    }
+
+    pwaves_update();
+    /* チャージ: B を押し続けると溜まり、離すと斬撃波を放つ */
+    if (key_down(KEY_B) && p->state != PS_HURT) {
+        if (p->charge < 255) p->charge++;
+        if (p->charge == CHARGE_FULL) sfx_play(SFX_CHECK);
+    } else if (key_released(KEY_B)) {
+        if (p->charge >= CHARGE_FULL && p->state != PS_HURT) {
+            if (p->state != PS_ATTACK || p->atk_t > 4) {
+                start_attack(2);
+                pwave_fire();
+                shake_t = 4;
+                shake_amp = 1;
+            }
+        }
+        p->charge = 0;
+    } else {
+        p->charge = 0;
     }
 
     switch (p->state) {
@@ -376,7 +459,12 @@ void player_draw(void) {
         }
         break;
     }
+    pwaves_draw();
     if (p->inv && p->state != PS_HURT && p->state != PS_DASH && (p->inv & 2)) return;
+    /* 溜め中の演出 */
+    if (p->charge >= CHARGE_FULL && (p->anim_t & 4)) pal = OBJPAL_GHOST;
+    if (p->charge >= 16 && (p->anim_t & 7) == 0)
+        fx_spawn(FX_SPARK, FROM_FP(p->b.x) + rng_range(PW + 8) - 8, FROM_FP(p->b.y) + rng_range(PH), 0);
     oam_put(spr, sx, sy, flip, pal, 1);
     if (p->state == PS_DASH) {
         for (int i = 0; i < 3; i++) {

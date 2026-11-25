@@ -54,6 +54,7 @@ typedef struct {
     uint32_t obj_tiles;
     uint32_t lag_frames, max_lines;
     uint32_t max_state, lag_state;
+    uint32_t pwaves, charge;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -497,6 +498,27 @@ int main(int argc, char** argv) {
         run(10, KRIGHT);
         read_debug(&d);
         check(d.px > bx + 30, "R でダッシュする");
+        /* チャージ斬り: B 長押し → 離すと斬撃波 */
+        run(20, 0);
+        run(50, KB);
+        read_debug(&d);
+        check(d.charge >= 40, "B 長押しでチャージが溜まる");
+        run(1, 0);
+        run(3, 0);
+        read_debug(&d);
+        check(d.pwaves >= 1, "離すと斬撃波が飛ぶ");
+        screenshot("04b_charge");
+        /* ポーズメニュー: START で開き、下→A で「ステージやり直し」 */
+        run(30, 0);
+        run(2, KSTART);
+        run(10, 0);
+        read_debug(&d);
+        check(d.state == GS_PAUSE, "START でポーズメニューが開く");
+        screenshot("04c_pause");
+        run(2, KSTART);
+        run(5, 0);
+        read_debug(&d);
+        check(d.state == GS_PLAY, "START でゲームに戻る");
         run(400, 0);
         check(audio_end("bgm_stage") > 200.0, "ステージで BGM/効果音が鳴っている");
         /* 自動プレイで 30 秒 */

@@ -104,12 +104,14 @@ static void stage_begin(int respawn) {
         game.checkpoint_x = level.def->spawn_x * CELL + CELL / 2;
         game.checkpoint_y = (level.def->spawn_y + 1) * CELL;
         stage_start_score = game.score;
+        game.stage_time = 0;
     } else {
         enemies_reset(0);
     }
     bullets_clear();
     fx_clear();
     boss_reset();
+    player_waves_clear();
     player_init(game.checkpoint_x - 5, game.checkpoint_y - 24);
     game.chain = 0;
     game.chain_t = 0;
@@ -181,6 +183,7 @@ static void title_update(void) {
         game.kills = 0;
         game.deaths = 0;
         game.chain_best = 0;
+        game.total_time = 0;
         set_state(GS_STAGE_INTRO);
     }
 }
@@ -209,7 +212,17 @@ static void intro_update(void) {
     }
 }
 
+/* mm:ss 形式で時間を表示 */
+static void text_time(int x, int y, u32 frames, int pal) {
+    u32 sec = frames / 60;
+    text_num(x, y, MIN(99u, sec / 60), 2, pal);
+    text_put(x + 2, y, ":", pal);
+    text_num(x + 3, y, sec % 60, 2, pal);
+}
+
 static void world_step(void) {
+    game.stage_time++;
+    game.total_time++;
     if (game.hitstop) {
         game.hitstop--;
     } else {
@@ -225,10 +238,27 @@ static void world_step(void) {
     level_scroll_update();
 }
 
+static int pause_cursor;
+static void pause_menu_draw(void) {
+    static const char* items[3] = {"RESUME", "RETRY STAGE", "QUIT TO TITLE"};
+    text_fill(8, 6, 14, 9, HUD_TILE_SOLID_DARK, BGPAL_HUD);
+    text_put_center(7, "- PAUSE -", BGPAL_HUD_Y);
+    for (int i = 0; i < 3; i++) {
+        if (i == pause_cursor) text_put(9, 9 + i * 2, ">", BGPAL_HUD_Y);
+        else text_fill(9, 9 + i * 2, 1, 1, HUD_TILE_SOLID_DARK, BGPAL_HUD);
+        text_put(11, 9 + i * 2, items[i], i == pause_cursor ? BGPAL_HUD_C : BGPAL_HUD);
+    }
+}
+
+static void pause_menu_clear(void) {
+    for (int y = 6; y < 15; y++) text_put(0, y, "                              ", BGPAL_HUD);
+}
+
 static void play_update(void) {
     if (key_hit(KEY_START)) {
         set_state(GS_PAUSE);
-        text_put_center(8, "- PAUSE -", BGPAL_HUD_Y);
+        pause_cursor = 0;
+        pause_menu_draw();
         sfx_play(SFX_SELECT);
         music_pause(1);
         return;
@@ -239,10 +269,26 @@ static void play_update(void) {
 
 static void pause_update(void) {
     draw_world();
-    if (key_hit(KEY_START)) {
-        text_put(0, 8, "                              ", BGPAL_HUD);
-        music_pause(0);
-        set_state(GS_PLAY);
+    if (key_hit(KEY_UP | KEY_DOWN)) {
+        pause_cursor = (pause_cursor + (key_hit(KEY_DOWN) ? 1 : 2)) % 3;
+        sfx_play(SFX_SELECT);
+        pause_menu_draw();
+    }
+    if (key_hit(KEY_START) && pause_cursor != 0) pause_cursor = 0; /* START は常に再開 */
+    if (key_hit(KEY_START | KEY_A)) {
+        pause_menu_clear();
+        sfx_play(SFX_SELECT);
+        if (pause_cursor == 0) {
+            music_pause(0);
+            set_state(GS_PLAY);
+        } else if (pause_cursor == 1) {
+            /* ステージ最初からやり直し (スコアはステージ開始時に戻す) */
+            game.score = stage_start_score;
+            set_state(GS_STAGE_INTRO);
+        } else {
+            save_record(game.score, game.chain_best, 0);
+            title_enter();
+        }
     }
 }
 
@@ -272,12 +318,19 @@ static void clear_update(void) {
     }
     if (t == 70) {
         player.state = PS_DEAD; /* 非表示 */
-        text_put_center(6, "STAGE CLEAR!", BGPAL_HUD_Y);
-        text_put(8, 9, "CHAIN BONUS", BGPAL_HUD);
-        text_num(20, 9, game.chain_best * 100u, 5, BGPAL_HUD);
-        text_put(8, 11, "LIFE BONUS", BGPAL_HUD);
-        text_num(20, 11, (u32)MAX(0, player.hp) * 200u, 5, BGPAL_HUD);
-        game_add_score(game.chain_best * 100u + (u32)MAX(0, player.hp) * 200u);
+        /* タイムボーナス: 3 分以内なら残り秒数 x 20 */
+        u32 sec = game.stage_time / 60;
+        u32 tbonus = sec < 180 ? (180 - sec) * 20 : 0;
+        text_put_center(5, "STAGE CLEAR!", BGPAL_HUD_Y);
+        text_put(7, 8, "TIME", BGPAL_HUD_C);
+        text_time(20, 8, game.stage_time, BGPAL_HUD);
+        text_put(7, 10, "TIME BONUS", BGPAL_HUD);
+        text_num(20, 10, tbonus, 5, BGPAL_HUD);
+        text_put(7, 12, "CHAIN BONUS", BGPAL_HUD);
+        text_num(20, 12, game.chain_best * 100u, 5, BGPAL_HUD);
+        text_put(7, 14, "LIFE BONUS", BGPAL_HUD);
+        text_num(20, 14, (u32)MAX(0, player.hp) * 200u, 5, BGPAL_HUD);
+        game_add_score(tbonus + game.chain_best * 100u + (u32)MAX(0, player.hp) * 200u);
         g_debug.clears++;
     }
     level_scroll_update();
@@ -318,16 +371,18 @@ static void ending_update(void) {
         text_clear();
         music_play(SONG_TITLE);
         text_put_center(3, "MISSION COMPLETE", BGPAL_HUD_Y);
-        if (save_record(game.score, game.chain_best, 1)) text_put_center(16, "NEW RECORD!", BGPAL_HUD_Y);
+        if (save_record(game.score, game.chain_best, 1)) text_put_center(17, "NEW RECORD!", BGPAL_HUD_Y);
         text_put_center(6, "THE CORE IS SILENT.", BGPAL_HUD);
         text_put_center(7, "STEEL RETURNS HOME.", BGPAL_HUD);
-        text_put(6, 10, "SCORE", BGPAL_HUD_C);
-        text_num(17, 10, game.score, 7, BGPAL_HUD);
-        text_put(6, 12, "BEST CHAIN", BGPAL_HUD_C);
-        text_num(21, 12, game.chain_best, 3, BGPAL_HUD);
-        text_put(6, 14, "DESTROYED", BGPAL_HUD_C);
-        text_num(21, 14, game.kills, 3, BGPAL_HUD);
-        text_put_center(18, "THANK YOU FOR PLAYING", BGPAL_HUD_Y);
+        text_put(6, 9, "SCORE", BGPAL_HUD_C);
+        text_num(17, 9, game.score, 7, BGPAL_HUD);
+        text_put(6, 11, "BEST CHAIN", BGPAL_HUD_C);
+        text_num(21, 11, game.chain_best, 3, BGPAL_HUD);
+        text_put(6, 13, "DESTROYED", BGPAL_HUD_C);
+        text_num(21, 13, game.kills, 3, BGPAL_HUD);
+        text_put(6, 15, "TOTAL TIME", BGPAL_HUD_C);
+        text_time(19, 15, game.total_time, BGPAL_HUD);
+        text_put_center(19, "THANK YOU FOR PLAYING", BGPAL_HUD_Y);
     }
     REG_BGHOFS(BG_SKY) = (u16)(t >> 2);
     oam_begin();
@@ -428,6 +483,13 @@ int main(void) {
         g_debug.vy = player.b.vy;
         g_debug.on_ground = player.b.on_ground;
         g_debug.boss_hp = boss_hp();
+        {
+            int n = 0, a, b, c, d2;
+            u8 id;
+            for (int k = 0; k < MAX_PWAVE; k++) n += player_wave_box(k, &a, &b, &c, &d2, &id);
+            g_debug.pwaves = (u32)n;
+            g_debug.charge = player.charge;
+        }
         g_debug.boss_state = (u32)boss_state_id();
         g_debug.boss_x = boss_x();
         {

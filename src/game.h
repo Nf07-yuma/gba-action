@@ -114,6 +114,7 @@ typedef struct {
     u16 state_t;
     u16 anim_t;
     u8 hit_any;       /* 今の攻撃で何か当てたか */
+    u8 charge;        /* チャージ斬りの溜め (B 長押しのフレーム数) */
 } Player;
 extern Player player;
 void player_init(s32 x, s32 y);
@@ -122,6 +123,10 @@ void player_draw(void);
 void player_damage(int dmg, int from_x);
 int player_attack_box(int* x0, int* y0, int* x1, int* y1, int* dmg, int* kbx, int* kby, int* stop);
 void player_kill(void);
+#define MAX_PWAVE 3
+#define CHARGE_FULL 40
+int player_wave_box(int k, int* x0, int* y0, int* x1, int* y1, u8* id);
+void player_waves_clear(void);
 
 /* ---- enemy.c ---- */
 #define MAX_ENEMIES 16
@@ -196,6 +201,8 @@ typedef struct {
     u16 deaths;
     u8 hud_dirty;
     u8 easy;      /* 1 = EASY (HP/残機が多い) */
+    u32 stage_time; /* ステージ経過フレーム */
+    u32 total_time; /* 全体の経過フレーム */
 } Game;
 #define START_LIVES (game.easy ? 5 : 3)
 extern Game game;
@@ -254,6 +261,8 @@ typedef struct {
     u32 lag_frames;  /* 処理が 1 フレームに収まらなかった回数 */
     u32 max_lines;   /* 1 フレームの処理に使った最大走査線数 (228 で 1 フレーム) */
     u32 max_state, lag_state; /* 発生時の画面状態 | (経過フレーム << 8) */
+    u32 pwaves;      /* 飛んでいる斬撃波の数 */
+    u32 charge;
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u
