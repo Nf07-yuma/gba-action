@@ -74,6 +74,10 @@ jobs:
         continue-on-error: true
         run: build/runner steel_chain.gba build/boteasy-out boteasy | grep -E "到達|bot end|death|ending" | tee build/boteasy-report.txt
 
+      - name: ボット通しプレイ HARD (到達度レポート)
+        continue-on-error: true
+        run: build/runner steel_chain.gba build/bothard-out bothard | grep -E "HP|到達|bot end|death|ending" | tee build/bothard-report.txt
+
       - name: ボット通しプレイ (到達度レポート)
         run: build/runner steel_chain.gba build/bot-out bot | tee build/bot-report.txt
 
@@ -93,6 +97,7 @@ jobs:
             build/bot-report.txt
             build/stage-report.txt
             build/boteasy-report.txt
+            build/bothard-report.txt
           if-no-files-found: warn
 
   release:

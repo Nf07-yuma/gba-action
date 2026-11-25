@@ -161,7 +161,9 @@ static void enemy_die(Ent* e) {
     shake_amp = 2;
     game.kills++;
     game_add_score(100);
-    if (rng_range(6) == 0 || (player.hp <= 2 && rng_range(2) == 0)) item_spawn(OBJ_HEAL, cx, cy);
+    /* 回復ドロップ (HARD はピンチ時にまれに出るだけ) */
+    if (game.hard ? (player.hp <= 2 && rng_range(4) == 0) : (rng_range(6) == 0 || (player.hp <= 2 && rng_range(2) == 0)))
+        item_spawn(OBJ_HEAL, cx, cy);
     ent_free(e, 1);
 }
 
@@ -643,8 +645,9 @@ void bullet_fire(s32 x, s32 y, s32 vx, s32 vy) {
         b->life = 240;
         b->x = x;
         b->y = y;
-        b->vx = vx;
-        b->vy = vy;
+        /* HARD は敵弾が 1.25 倍速 */
+        b->vx = game.hard ? vx + vx / 4 : vx;
+        b->vy = game.hard ? vy + vy / 4 : vy;
         b->kind = 0;
         return;
     }

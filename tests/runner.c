@@ -494,9 +494,15 @@ int main(int argc, char** argv) {
         return failures ? 1 : 0;
     }
     if (strstr(scenario, "easy")) {
-        /* EASY を選択 */
+        /* EASY を選択 (NORMAL から左) */
+        run(2, KLEFT);
+        run(4, 0);
+    }
+    if (strstr(scenario, "hard")) {
+        /* HARD を選択 (NORMAL から右) */
         run(2, KRIGHT);
         run(4, 0);
+        screenshot("01b_title_hard");
     }
     run(2, KSTART);
     run(40, 0);
@@ -510,6 +516,9 @@ int main(int argc, char** argv) {
     check(d.state == GS_PLAY, "ステージ開始 (PLAY)");
     int start_x = d.px;
     print_debug("start");
+    if (strstr(scenario, "easy")) check(d.hp == 12, "EASY は HP 12 で始まる");
+    else if (strstr(scenario, "hard")) check(d.hp == 6, "HARD は HP 6 で始まる");
+    else check(d.hp == 8, "NORMAL は HP 8 で始まる");
 
     if (strcmp(scenario, "smoke") == 0) {
         audio_begin();
@@ -805,7 +814,7 @@ int main(int argc, char** argv) {
         printf("  到達ステージ: %u\n", max_stage + 1);
         read_debug(&d);
         check(d.clears >= 1, "ボットがステージ 1 をクリアできる (難易度/地形の回帰検知)");
-        check(d.popups >= 1, "CHAIN の節目 (10) でポップアップとボーナスが出る");
+        if (!strstr(scenario, "hard")) check(d.popups >= 1, "CHAIN の節目 (10) でポップアップとボーナスが出る");
     }
 
     print_debug("final");

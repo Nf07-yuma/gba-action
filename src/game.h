@@ -206,6 +206,7 @@ typedef struct {
     u16 deaths;
     u8 hud_dirty;
     u8 easy;      /* 1 = EASY (HP/残機が多い) */
+    u8 hard;      /* 1 = HARD (HP6・敵弾が速い・回復が出にくい) */
     u8 demo;      /* 1 = タイトル放置で流れるデモプレイ中 */
     u32 stage_time; /* ステージ経過フレーム */
     u32 total_time; /* 全体の経過フレーム */
