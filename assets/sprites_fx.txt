@@ -506,3 +506,23 @@ yyrooroorooroory
 ..kGk...
 ...k....
 ........
+
+@lift0 32 8
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+khhhhhhhhhhhhhhhhhhhhhhhhhhhhhhk
+kGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGk
+kGGGCCGGgGccGGGGCCGGGGccgGGGGGGk
+kggggggggggggggggggggggggggggggk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+......Cc.................Cc.....
+......c..................c......
+
+@lift1 32 8
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+khhhhhhhhhhhhhhhhhhhhhhhhhhhhhhk
+kGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGk
+kGGGccGGgGCCGGGGccGGGGCCgGGGGGGk
+kggggggggggggggggggggggggggggggk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+......cc.................cc.....
+................................

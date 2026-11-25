@@ -129,6 +129,7 @@ static void draw_world(void) {
 /* --------------------------------------------------------------- 各画面 */
 static void title_enter(void) {
     set_state(GS_TITLE);
+    dma3_copy32(PAL_BG, &theme_pals[0], 16);
     REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_OBJ;
     text_clear();
     cam_x = 0;
@@ -378,5 +379,11 @@ int main(void) {
         g_debug.boss_hp = boss_hp();
         g_debug.boss_state = (u32)boss_state_id();
         g_debug.boss_x = boss_x();
+        {
+            s32 xy[8];
+            int n = lifts_debug(xy, 4);
+            g_debug.lift_count = (u32)n;
+            for (int i = 0; i < 8; i++) g_debug.lifts[i] = i < n * 2 ? xy[i] : 0;
+        }
     }
 }

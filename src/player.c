@@ -69,6 +69,13 @@ static void start_attack(int step) {
     if (player.attack_id == 0) player.attack_id = 1;
     if (step < 3) {
         player.b.vx = player.dir * a->lunge;
+        /* 崖際では踏み込まない (攻撃で穴に落ちないように) */
+        if (player.b.on_ground) {
+            int fx = center_x() + player.dir * 14;
+            int fy = FROM_FP(player.b.y) + PH + 2;
+            int c = level_cell(fx >> 4, fy >> 4);
+            if (c != CELL_SOLID && c != CELL_ONEWAY) player.b.vx = 0;
+        }
     } else {
         if (player.air_attacks < 2 && player.b.vy > -0x100) player.b.vy = -0x180;
         player.air_attacks++;
@@ -296,6 +303,7 @@ void player_update(void) {
     int was_air = !p->b.on_ground;
     s32 vy_before = p->b.vy;
     body_move(&p->b);
+    lifts_apply(&p->b);
     if (was_air && p->b.on_ground && vy_before > 0x300) {
         fx_spawn(FX_DUST, center_x() - 10, FROM_FP(p->b.y) + PH - 6, 0);
         fx_spawn(FX_DUST, center_x() + 2, FROM_FP(p->b.y) + PH - 6, 1);

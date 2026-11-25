@@ -49,6 +49,8 @@ typedef struct {
     uint32_t boss_state;
     int32_t boss_x;
     uint32_t cmd, cmd_arg;
+    uint32_t lift_count;
+    int32_t lifts[8];
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -215,6 +217,51 @@ static int cell_at(const DebugInfo* d, int cx, int cy) {
 #define C_HAZARD 3
 
 static int bot_jump_hold;
+
+/* 地面 (固体/足場) の上面か */
+static int is_floor(int c) { return c == C_SOLID || c == C_ONEWAY; }
+
+/* 前方に届きそうな動く足場があるか: 1=今跳べば乗れる, 2=待てば来る, 0=無い */
+static int lift_ahead(const DebugInfo* d, int feet) {
+    int front = d->px + 10;
+    int any = 0;
+    for (unsigned i = 0; i < d->lift_count && i < 4; i++) {
+        int lx = d->lifts[i * 2], ly = d->lifts[i * 2 + 1];
+        if (lx + 32 < d->px - 8 || lx > d->px + 220) continue;
+        any = 1;
+        int dy = ly - feet;
+        /* 同じ高さで縁に接していれば歩いて乗る */
+        if (dy > -3 && dy < 3 && lx <= front + 2 && lx + 32 >= front + 12) return 3;
+        /* 高さが違う足場は縁付近に来たら跳ぶ */
+        if (dy <= -3 && lx <= front + 20 && lx + 32 >= front + 12 && dy > -48) return 1;
+        /* 低い位置の足場: 真下付近に来たら飛び降りる */
+        if (dy >= 3 && dy < 80 && lx <= front + 24 && lx + 32 >= front + 4) return 1;
+    }
+    return any ? 2 : 0;
+}
+
+/* 動く足場の上にいるとき: 前方の着地点が射程内か */
+static int landing_in_reach(const DebugInfo* d, int feet) {
+    int cx0 = (d->px + 5) >> 4;
+    for (int a = 1; a <= 4; a++) {
+        for (int cy = (feet >> 4) - 4; cy <= (feet >> 4) + 2; cy++) {
+            if (is_floor(cell_at(d, cx0 + a, cy)) && !is_floor(cell_at(d, cx0 + a, cy - 1)) &&
+                cell_at(d, cx0 + a, cy - 1) != C_HAZARD) {
+                int top = cy * 16;
+                int gap = (cx0 + a) * 16 - (d->px + 10);
+                int dh = top - feet; /* 負 = 高い */
+                int allow = dh >= 0 ? 44 : 44 + dh / 2;
+                if (dh > -40 && dh < 64 && gap <= allow) return 1;
+            }
+        }
+    }
+    for (unsigned i = 0; i < d->lift_count && i < 4; i++) {
+        int lx = d->lifts[i * 2], ly = d->lifts[i * 2 + 1];
+        if (lx > d->px + 20 && lx < d->px + 72 && ly - feet > -40 && ly - feet < 40) return 1;
+    }
+    return 0;
+}
+
 enum { BS_NONE, BS_INTRO, BS_IDLE, BS_SHOOT, BS_CHARGE, BS_STUN, BS_JUMP, BS_DEAD };
 
 /* ボス戦の戦術: 突進は動き出してから飛び越し、着地の衝撃波は到達時間を見て跳ぶ、気絶中に連撃 */
@@ -291,16 +338,55 @@ static void bot_step(int t, DebugInfo* prev, int* stuck) {
         }
         /* 穴の近くでは攻撃しない (攻撃で足が止まるため) */
         if (!gap_near && t % 10 < 2) keys |= KB;
-        if (d.on_ground) {
+        /* 実際に動く足場の上に立っているか */
+        int on_lift = 0;
+        if (d.on_ground)
+            for (unsigned i = 0; i < d.lift_count && i < 4; i++) {
+                int lx = d.lifts[i * 2], ly = d.lifts[i * 2 + 1];
+                if (ly - (feet + 1) > -3 && ly - (feet + 1) < 3 && d.px + 10 > lx && d.px < lx + 32) on_lift = 1;
+            }
+        if (on_lift) {
+            /* 足場の上: 着地点が射程に入るまで待つ */
+            keys &= ~KRIGHT;
+            keys &= ~KB;
+            /* 乗っている足場の右端へ寄る */
+            int at_edge = 1;
+            for (unsigned i = 0; i < d.lift_count && i < 4; i++) {
+                int lx = d.lifts[i * 2], ly = d.lifts[i * 2 + 1];
+                if (ly - feet > -3 && ly - feet < 4 && d.px + 10 > lx && d.px < lx + 32 && d.px + 10 < lx + 29) {
+                    keys |= KRIGHT;
+                    at_edge = 0;
+                }
+            }
+            *stuck = 0;
+            if (at_edge && landing_in_reach(&d, feet)) {
+                want_jump = 1;
+                keys |= KRIGHT;
+            }
+        } else if (d.on_ground) {
             /* 足元の 1 セル先が穴/トゲ, 前方が壁なら跳ぶ */
             int x_front = d.px + 10 + 4;
             int below = cell_at(&d, x_front >> 4, cy + 1);
-            if (below != C_SOLID && below != C_ONEWAY) want_jump = 1;
+            if (below != C_SOLID && below != C_ONEWAY) {
+                int la = lift_ahead(&d, feet);
+                if (la == 0) want_jump = 1;
+                else if (la == 3) { /* 同じ高さで隣接: そのまま歩いて乗る */
+                    *stuck = 0;
+                    keys &= ~KB;
+                }
+                else if (la == 1) want_jump = 1;
+                else {
+                    keys &= ~KRIGHT; /* 足場を待つ (寄ってくる敵は斬る) */
+                    if (t % 12 < 2 && d.enemies > 0) keys |= KB;
+                    *stuck = 0;
+                }
+            }
             if (below == C_HAZARD) want_jump = 1;
             int front = (d.px + 10 + 6) >> 4;
             if (cell_at(&d, front, cy) == C_SOLID || cell_at(&d, front, cy - 1) == C_SOLID) want_jump = 1;
             if (*stuck > 4) want_jump = 1;
         }
+        if (getenv("JUMP_LOG") && want_jump && bot_jump_hold == 0) printf("  [jump] px=%d on_lift=%d stuck=%d below=%d\n", d.px, on_lift, *stuck, cell_at(&d, (d.px + 14) >> 4, cy + 1));
         if (want_jump && bot_jump_hold == 0) bot_jump_hold = 22;
         if (bot_jump_hold > 0) {
             bot_jump_hold--;
@@ -419,6 +505,29 @@ int main(int argc, char** argv) {
         print_debug("after bot");
         read_debug(&d);
         check(d.kills > 0 || d.score > 0, "敵を倒せる/スコアが入る");
+    } else if (strncmp(scenario, "stage", 5) == 0) {
+        /* 指定ステージ (1 始まり) からボットでプレイ */
+        int st = atoi(scenario + 5) - 1;
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), st);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
+        run(130, 0);
+        DebugInfo prev = d;
+        int stuck = 0;
+        uint32_t clears0 = d.clears;
+        for (int t = 0; t < 60 * 300; t++) {
+            bot_step(t, &prev, &stuck);
+            if (t % 300 == 0 && t < 9000) {
+                char name[64];
+                snprintf(name, sizeof(name), "st_%03d", t / 300);
+                screenshot(name);
+            }
+            if (prev.clears > clears0 || prev.state == GS_ENDING) break;
+            if (getenv("LIFT_LOG") && t % 8 == 0 && prev.px > 560 && prev.px < 760)
+                printf("  [lift] vy=%d t=%d px=%d py=%d og=%u n=%u L0=(%d,%d) L1=(%d,%d)\n", prev.vy, t, prev.px, prev.py, prev.on_ground, prev.lift_count, prev.lifts[0], prev.lifts[1], prev.lifts[2], prev.lifts[3]);
+        }
+        read_debug(&d);
+        print_debug("stage end");
+        check(d.clears > clears0 || d.state == GS_ENDING, "ボットがこのステージをクリアできる");
     } else if (strcmp(scenario, "boss") == 0) {
         /* ステージ3末尾のボス戦へ直行し、ボスの出現・攻撃・被弾を検証 */
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 2);

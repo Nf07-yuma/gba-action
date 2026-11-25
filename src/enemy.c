@@ -11,6 +11,8 @@ typedef struct {
     u8 cool;
     u16 t;
     s32 ax, ay;    /* 出現位置 (ピクセル) */
+    s16 ldx, ldy;  /* 足場の今フレームの移動量 */
+    u8 phase;      /* 足場の位相 (0-63) */
     s16 obj;       /* レベルオブジェクト番号 (-1 = ドロップ品) */
 } Ent;
 
@@ -18,6 +20,7 @@ typedef struct {
 #define MAX_OBJS 256
 static Ent ents[MAX_ENTS];
 static u8 obj_flag[MAX_OBJS];
+static s8 standing_lift = -1;
 #define OF_SPAWNED 1
 #define OF_DEAD    2
 #define OF_LIT     4
@@ -36,6 +39,7 @@ static int is_enemy(int type) {
 
 void enemies_reset(int full) {
     memset(ents, 0, sizeof(ents));
+    standing_lift = -1;
     for (int i = 0; i < MAX_OBJS; i++) obj_flag[i] = full ? 0 : (obj_flag[i] & OF_LIT);
 }
 
@@ -64,12 +68,16 @@ static void ent_init(Ent* e, int type, int px, int py) {
     case OBJ_CHECKPOINT: w = 8; h = 16; break;
     case OBJ_GOAL:    w = 18; h = 30; break;
     case OBJ_HEAL:    w = 8; h = 8; break;
+    case OBJ_LIFT_H:
+    case OBJ_LIFT_V:  w = 32; h = 6; break;
     }
     e->b.w = (s16)w;
     e->b.h = (s16)h;
     e->b.x = TO_FP(px - w / 2);
     e->b.y = TO_FP(py - h);
     if (type == OBJ_DRONE) e->b.y = TO_FP(py - h - 4);
+    /* 足場の上面は配置したセルの下端 (= 隣の地面と同じ高さ) */
+    if (type == OBJ_LIFT_H || type == OBJ_LIFT_V) e->b.y = TO_FP(py);
     e->ax = px;
     e->ay = FROM_FP(e->b.y);
 }
@@ -95,12 +103,14 @@ int enemies_alive(void) {
 
 void enemies_spawn_check(void) {
     const LevelDef* d = level.def;
-    int l = (cam_x - 24) >> 4, r = (cam_x + SCREEN_W + 24) >> 4;
+    int l = (cam_x - 72) >> 4, r = (cam_x + SCREEN_W + 72) >> 4;
+    int el = (cam_x - 24) >> 4, er = (cam_x + SCREEN_W + 24) >> 4; /* 敵は画面のすぐ外で出現 */
     for (int i = 0; i < d->nobjs && i < MAX_OBJS; i++) {
         const LevelObj* o = &d->objs[i];
         if (o->x < l) continue;
         if (o->x > r) break;
         if (obj_flag[i] & (OF_SPAWNED | OF_DEAD)) continue;
+        if (o->type != OBJ_LIFT_H && o->type != OBJ_LIFT_V && (o->x < el || o->x > er)) continue;
         if (o->type == OBJ_BOSS) {
             if (boss_check_start(o->x, o->y)) obj_flag[i] |= OF_SPAWNED;
             continue;
@@ -109,6 +119,9 @@ void enemies_spawn_check(void) {
         if (!e) return;
         ent_init(e, o->type, o->x * CELL + CELL / 2, (o->y + 1) * CELL);
         e->obj = (s16)i;
+        e->phase = o->param;
+        /* 足場は画面外でも時間に同期して動く (再出現しても位置が飛ばない) */
+        if (o->type == OBJ_LIFT_H || o->type == OBJ_LIFT_V) e->t = (u16)game.frame;
         obj_flag[i] |= OF_SPAWNED;
     }
 }
@@ -298,8 +311,63 @@ static void update_shield(Ent* e) {
     body_move(&e->b);
 }
 
+/* ---- 動く足場 ---- */
+
+static void update_lift(Ent* e) {
+    int ph = (e->t >> 2) + e->phase;
+    s32 ox = e->b.x, oy = e->b.y;
+    if (e->type == OBJ_LIFT_H) {
+        e->b.x = TO_FP(e->ax - e->b.w / 2) + sin64[ph & 63] * TO_FP(44) / 64;
+    } else {
+        e->b.y = TO_FP(e->ay - 32) + sin64[ph & 63] * TO_FP(32) / 64;
+    }
+    e->ldx = (s16)(e->b.x - ox);
+    e->ldy = (s16)(e->b.y - oy);
+}
+
+/* プレイヤーと足場の接触: 乗っていれば運び、落下中に上面に触れたら着地 */
+void lifts_apply(Body* b) {
+    int prev = standing_lift;
+    standing_lift = -1;
+    for (int i = 0; i < MAX_ENTS; i++) {
+        Ent* e = &ents[i];
+        if (!e->active || (e->type != OBJ_LIFT_H && e->type != OBJ_LIFT_V)) continue;
+        if (i == prev) {
+            b->x += e->ldx;
+            b->y += e->ldy;
+        }
+        int top = FROM_FP(e->b.y);
+        int l = FROM_FP(e->b.x), r = l + e->b.w;
+        int px = FROM_FP(b->x), bot = FROM_FP(b->y) + b->h;
+        if (b->vy < 0 || px + b->w <= l + 1 || px >= r - 1) continue;
+        if (bot >= top - 1 && bot <= top + 7) {
+            b->y = TO_FP(top - b->h);
+            b->vy = 0;
+            b->on_ground = 1;
+            standing_lift = (s8)i;
+            return;
+        }
+    }
+}
+
+int lifts_debug(s32* xy, int max) {
+    int n = 0;
+    for (int i = 0; i < MAX_ENTS && n < max; i++) {
+        Ent* e = &ents[i];
+        if (!e->active || (e->type != OBJ_LIFT_H && e->type != OBJ_LIFT_V)) continue;
+        xy[n * 2] = FROM_FP(e->b.x);
+        xy[n * 2 + 1] = FROM_FP(e->b.y);
+        n++;
+    }
+    return n;
+}
+
 static void update_prop(Ent* e) {
     switch (e->type) {
+    case OBJ_LIFT_H:
+    case OBJ_LIFT_V:
+        update_lift(e);
+        break;
     case OBJ_CHECKPOINT:
         if (!(obj_flag[e->obj] & OF_LIT) && body_overlap(&e->b, &player.b)) {
             obj_flag[e->obj] |= OF_LIT;
@@ -342,7 +410,8 @@ void enemies_update(void) {
         e->t++;
         /* 画面外に大きく離れたら消す (再出現可能) */
         int ex = FROM_FP(e->b.x);
-        if (ex < cam_x - 96 || ex > cam_x + SCREEN_W + 96 || FROM_FP(e->b.y) > level.px_h + 32) {
+        int margin = (e->type == OBJ_LIFT_H || e->type == OBJ_LIFT_V) ? 160 : 96;
+        if (ex < cam_x - margin || ex > cam_x + SCREEN_W + margin || FROM_FP(e->b.y) > level.px_h + 32) {
             if (FROM_FP(e->b.y) > level.px_h + 32 && is_enemy(e->type)) {
                 game.kills++;
                 game_add_score(100);
@@ -406,6 +475,10 @@ void enemies_draw(void) {
             break;
         case OBJ_GOAL:
             oam_put(SPR_GATE0 + ((e->t >> 3) & 1), cx - 16, bot - 32, 0, OBJPAL_NORMAL, 2);
+            break;
+        case OBJ_LIFT_H:
+        case OBJ_LIFT_V:
+            oam_put(SPR_LIFT0 + ((e->t >> 3) & 1), FROM_FP(e->b.x) - cam_x, FROM_FP(e->b.y) - cam_y, 0, OBJPAL_NORMAL, 2);
             break;
         case OBJ_HEAL:
             if (e->obj < 0 && e->t > 480 && (e->t & 4)) break;

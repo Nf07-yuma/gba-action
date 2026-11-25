@@ -45,6 +45,7 @@ sudo apt-get install libmgba-dev zlib1g-dev
 make test                                        # スモークテスト (build/test-out/*.png)
 build/runner steel_chain.gba build/bot-out bot   # ボットによる通しプレイ
 build/runner steel_chain.gba build/boss-out boss # ボス戦へ直行してボット戦術で撃破を検証
+build/runner steel_chain.gba build/st4 stage4    # 指定ステージからボットでプレイ
 ```
 
 ROM は EWRAM 先頭 (`0x02000000`) にデバッグ情報ブロック（状態・座標・HP・スコア等）を置いており、
@@ -73,7 +74,7 @@ tests/runner.c  ヘッドレステストランナー (libmgba)
 - `tools/compose_player.py` … 主人公のポーズ（関節座標）を編集して `make sprites` で再合成
 - `assets/music/*.txt` … BGM の楽譜（`C-5` 音符、`---` 伸ばす、`...` 消音、ドラムは `K`=キック `S`=スネア `H`=ハット）
 - `tools/build_levels.py` … ステージ 2 以降を区画の組み合わせで生成（`python3 tools/build_levels.py`）
-- `assets/levels/*.txt` … ステージ（`#`=壁 `=`=足場 `^`=トゲ `P`=開始位置 `c/d/t/j/s`=敵 `C`=中間地点 `G`=ゴール `+`=回復）
+- `assets/levels/*.txt` … ステージ（`#`=壁 `=`=足場 `^`=トゲ `P`=開始位置 `c/d/t/j/s`=敵 `C`=中間地点 `G`=ゴール `+`=回復 `L/l`=横に動く足場 `V/v`=縦に動く足場（小文字は逆位相） `B`=ボス）
 
 ## CI / CD
 

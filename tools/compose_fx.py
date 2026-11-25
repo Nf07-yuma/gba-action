@@ -173,6 +173,31 @@ def debris(frame):
     return q
 
 
+def lift(frame):
+    """動く足場 32x8"""
+    p = canvas(32, 8)
+    for x in range(32):
+        p[0][x] = I["k"]
+        p[1][x] = I["h"]
+        p[2][x] = I["G"]
+        p[3][x] = I["G"] if x % 8 else I["g"]
+        p[4][x] = I["g"]
+        p[5][x] = I["k"]
+    for x in (0, 31):
+        for y in range(6):
+            p[y][x] = I["k"]
+    for i, x in enumerate(range(4, 28, 6)):
+        p[3][x] = I["C"] if (i + frame) % 2 == 0 else I["c"]
+        p[3][x + 1] = p[3][x]
+    # 下の推進器の光
+    for x in (6, 25):
+        p[6][x] = I["C"] if frame == 0 else I["c"]
+        p[6][x + 1] = I["c"]
+        if frame == 0:
+            p[7][x] = I["c"]
+    return p
+
+
 def main():
     S = {}
     # 斬撃 (32x32, プレイヤー前方に置く。右向き基準)
@@ -196,6 +221,8 @@ def main():
         S[f"wave{i}"] = shockwave(i)
     for i in range(2):
         S[f"debris{i}"] = debris(i)
+    for i in range(2):
+        S[f"lift{i}"] = lift(i)
     out = ["# 自動生成: tools/compose_fx.py"]
     for name, p in S.items():
         out.append(f"@{name} {len(p[0])} {len(p)}")

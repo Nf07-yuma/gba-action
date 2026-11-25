@@ -180,6 +180,34 @@ def gen_logo():
     return p
 
 
+# ---- ステージ配色テーマ ----
+def _mix(c, t, k):
+    return tuple(max(0, min(31, int(round(a + (b - a) * k)))) for a, b in zip(c, t))
+
+
+def _theme(level_tint, level_k, sky_map, light=None):
+    lv = [_mix(c, level_tint, level_k) for c in BG_PAL_LEVEL]
+    if light:
+        lv[9], lv[10] = light
+    sky = [sky_map(c) for c in BG_PAL_SKY]
+    return lv, sky
+
+
+THEMES = [
+    # 0: 工場の夜 (そのまま)
+    (list(BG_PAL_LEVEL), list(BG_PAL_SKY)),
+    # 1: 夕暮れのスカイウェイ (空が橙〜紫)
+    _theme((20, 14, 12), 0.18, lambda c: (min(31, c[0] + c[2] // 2 + 2), min(31, c[1] + 2), max(0, c[2] - 2)),
+           ((31, 20, 6), (31, 29, 18))),
+    # 2: 灼熱の鋳造所 (赤みの鋼, 橙の照明)
+    _theme((26, 8, 4), 0.22, lambda c: (min(31, c[0] + 4), c[1] // 2, c[2] // 2), ((31, 14, 2), (31, 26, 10))),
+    # 3: データハイウェイ (緑のネオン)
+    _theme((4, 18, 10), 0.2, lambda c: (c[0] // 3, min(31, c[1] + 3), c[2] // 2 + 2), ((6, 31, 12), (24, 31, 24))),
+    # 4: 中枢コア (紫とシアン)
+    _theme((16, 6, 24), 0.25, lambda c: (min(31, c[0] + 3), c[1] // 2, min(31, c[2] + 6)), ((26, 10, 31), (31, 24, 31))),
+]
+
+
 def rgb15(c):
     r, g, b = c
     return r | (g << 5) | (b << 10)
@@ -638,7 +666,12 @@ OBJ_TYPES = {
     "j": 7,  # ジャンパー
     "B": 8,  # ボス
     "s": 9,  # シールド兵
+    "L": 10,  # 横に動く足場
+    "V": 11,  # 縦に動く足場
+    "l": 10,  # 横に動く足場 (逆位相)
+    "v": 11,  # 縦に動く足場 (逆位相)
 }
+OBJ_PARAMS = {"l": 32, "v": 32}
 BACK_KINDS = {"p": 0, "w": 1, "g": 2, "b": 3}
 
 
@@ -677,7 +710,7 @@ def load_level(path):
             elif ch == "P":
                 spawn = (x, y)
             elif ch in OBJ_TYPES:
-                objs.append((OBJ_TYPES[ch], 0, x, y))
+                objs.append((OBJ_TYPES[ch], OBJ_PARAMS.get(ch, 0), x, y))
             cells.append(c)
             backs.append(back)
     # オブジェクトを置いたマスは左右の背景装飾を引き継ぐ (壁に穴が空かないように)
@@ -813,6 +846,12 @@ def main():
 
     pal_block("pal_obj", [SPR_PAL, SPR_PAL_FLASH, SPR_PAL_ALT, SPR_PAL_HURT, SPR_PAL_GHOST])
     pal_block("pal_bg", [BG_PAL_LEVEL, BG_PAL_SKY, BG_PAL_HUD, BG_PAL_HUD_Y, BG_PAL_HUD_C, BG_PAL_LOGO])
+    tv = []
+    for lv, sky in THEMES:
+        tv += [rgb15(c) for c in lv] + [rgb15(c) for c in sky]
+    H.append(f"#define THEME_COUNT {len(THEMES)}")
+    H.append(f"extern const u16 theme_pals[THEME_COUNT * 32];")
+    C.append(f"const u16 theme_pals[THEME_COUNT * 32] = {{\n{c_u16(tv)}\n}};")
     H += ["#define OBJPAL_NORMAL 0", "#define OBJPAL_FLASH 1", "#define OBJPAL_ALT 2", "#define OBJPAL_HURT 3", "#define OBJPAL_GHOST 4",
           "#define BGPAL_LEVEL 0", "#define BGPAL_SKY 1", "#define BGPAL_HUD 2", "#define BGPAL_HUD_Y 3",
           "#define BGPAL_HUD_C 4", "#define BGPAL_LOGO 5", ""]
@@ -908,7 +947,7 @@ def main():
           "#define CELL_BACK 4"]
     for k, v in OBJ_TYPES.items():
         pass
-    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD };"]
+    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD, OBJ_LIFT_H, OBJ_LIFT_V };"]
     level_dir = os.path.join(ASSETS, "levels")
     level_files = sorted(f for f in os.listdir(level_dir) if f.endswith(".txt"))
     lv_names = []

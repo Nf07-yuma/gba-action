@@ -92,6 +92,9 @@ void level_load(int index) {
     dma3_fill32(SCREENBLOCK(SBB_LEVEL), 0, 2 * 0x800 / 4);
     for (int i = 0; i < 64; i++) col_loaded[i] = 0;
     shake_t = 0;
+    /* ステージの配色テーマ (BG パレット 0=ステージ, 1=遠景) */
+    int th = level.def->theme < THEME_COUNT ? level.def->theme : 0;
+    dma3_copy32(PAL_BG, &theme_pals[th * 32], 16);
 }
 
 /* ---- 当たり判定 ---- */
@@ -151,6 +154,20 @@ void body_move(Body* b) {
         }
     }
     b->y = ny;
+    /* 接地プローブ: サブピクセルで床にめり込みきっていない場合も足元 1px 下が床なら接地扱い
+       (これが無いと立っている間に接地フラグが 1 フレームおきに外れる) */
+    if (!b->on_ground && b->vy >= 0) {
+        int fb = FROM_FP(b->y) + b->h;
+        if ((fb & 15) == 0) {
+            int cy = fb >> 4;
+            if (row_any(cy, l >> 4, r >> 4, CELL_SOLID) || row_any(cy, l >> 4, r >> 4, CELL_HAZARD) ||
+                (b->oneway && !b->drop && row_any(cy, l >> 4, r >> 4, CELL_ONEWAY))) {
+                b->y = TO_FP(fb - b->h);
+                b->vy = 0;
+                b->on_ground = 1;
+            }
+        }
+    }
     /* 一方通行すり抜けの解除: 足場セルを抜けたら戻す */
     if (b->drop) {
         int fb = FROM_FP(b->y) + b->h - 1;
