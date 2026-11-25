@@ -279,6 +279,7 @@ typedef struct {
     u32 pwaves;      /* 飛んでいる斬撃波の数 */
     u32 charge;
     u32 ending_phase; /* 0=リザルト, 1=スタッフロール, 2=THE END */
+    u32 popups;       /* CHAIN の節目ポップアップを出した回数 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

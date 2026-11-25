@@ -11,11 +11,30 @@ static u32 stage_start_score;
 static u16 hud_last_hp = 0xFFFF, hud_last_lives = 0xFFFF, hud_last_chain = 0xFFFF;
 static u32 hud_last_score = 0xFFFFFFFF;
 
+/* CHAIN の節目 (10/25/50/100) で画面中央上に出るポップアップ */
+#define POPUP_ROW 4
+#define POPUP_LEN 100
+static const u16 chain_marks[] = {10, 25, 50, 100};
+static const char* const chain_words[] = {"NICE!", "GREAT!", "AMAZING!", "UNSTOPPABLE!"};
+static u8 popup_t;
+static char popup_text[24];
+
+static void popup_draw(void) {
+    if (!popup_t) return;
+    popup_t--;
+    text_put(0, POPUP_ROW, "                              ", BGPAL_HUD);
+    /* 最初は点滅、最後の 20 フレームで消える */
+    int elapsed = POPUP_LEN - popup_t;
+    if (popup_t > 0 && (popup_t > 20 || (popup_t & 2)) && (elapsed >= 24 || !(elapsed & 4)))
+        text_put_center(POPUP_ROW, popup_text, BGPAL_HUD_Y);
+}
+
 void hud_draw(int force) {
     if (force) {
         text_clear();
         hud_last_hp = hud_last_lives = hud_last_chain = 0xFFFF;
         hud_last_score = 0xFFFFFFFF;
+        popup_t = 0;
     }
     if (game.state != GS_PLAY && game.state != GS_DEAD && game.state != GS_CLEAR && game.state != GS_STAGE_INTRO &&
         game.state != GS_PAUSE)
@@ -50,6 +69,7 @@ void hud_draw(int force) {
             text_put(21, 1, "         ", BGPAL_HUD);
         }
     }
+    popup_draw();
 }
 
 /* ---------------------------------------------------------- ゲーム API */
@@ -59,7 +79,27 @@ void game_add_score(u32 pts) {
 }
 
 void game_add_chain(int hits) {
+    u16 before = game.chain;
     game.chain += (u16)hits;
+    for (unsigned i = 0; i < sizeof(chain_marks) / sizeof(chain_marks[0]); i++) {
+        u16 mk = chain_marks[i];
+        if (before < mk && game.chain >= mk) {
+            /* "25 CHAIN GREAT!" とボーナス (節目 x 50 点) */
+            char* p = popup_text;
+            if (mk >= 100) *p++ = (char)('0' + mk / 100);
+            *p++ = (char)('0' + (mk / 10) % 10);
+            *p++ = (char)('0' + mk % 10);
+            const char* w = " CHAIN ";
+            while (*w) *p++ = *w++;
+            w = chain_words[i];
+            while (*w) *p++ = *w++;
+            *p = 0;
+            popup_t = POPUP_LEN;
+            game_add_score(mk * 50u);
+            sfx_play(SFX_CHARGE);
+            g_debug.popups++;
+        }
+    }
     game.chain_t = 120;
     if (game.chain > game.chain_best) game.chain_best = game.chain;
     game_add_score(10u * MIN(game.chain, 50));
