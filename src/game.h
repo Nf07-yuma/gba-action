@@ -200,6 +200,7 @@ typedef struct {
     u16 chain_best;
     u16 stage_chain_best; /* このステージ内の最大 CHAIN (ランク評価用) */
     u16 stage_deaths;     /* このステージでのミス回数 */
+    u8 run_rank[5];       /* 今回のプレイのステージ別ランク+1 (0=未プレイ) */
     u16 hitstop;
     u16 slowmo;   /* ボス撃破時のスローモーション残りフレーム (この間は 2 フレームに 1 回だけ進む) */
     u32 frame;

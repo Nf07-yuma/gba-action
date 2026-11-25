@@ -363,6 +363,7 @@ static void clear_update(void) {
         if (!game.demo && save_rank_stage(game.stage, r)) text_put(20, 16, "BEST!", BGPAL_HUD_C);
         sfx_play(r == 3 ? SFX_CHARGE : SFX_CHECK);
         g_debug.rank = (u32)r;
+        if (game.stage < 5) game.run_rank[game.stage] = (u8)(r + 1);
         g_debug.rank_hist |= (u32)(r + 1) << (game.stage * 4);
     }
     if (bg_dim < 12 && (t & 1)) bg_dim++;

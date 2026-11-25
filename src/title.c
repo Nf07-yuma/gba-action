@@ -140,6 +140,7 @@ void title_update(void) {
         game.deaths = 0;
         game.chain_best = 0;
         game.total_time = 0;
+        for (int i = 0; i < 5; i++) game.run_rank[i] = 0;
         game_set_state(GS_STAGE_INTRO);
     }
 }

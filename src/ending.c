@@ -75,18 +75,25 @@ void ending_update(void) {
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
         text_clear();
         music_play(SONG_ENDING);
-        text_put_center(3, "MISSION COMPLETE", BGPAL_HUD_Y);
+        text_put_center(2, "MISSION COMPLETE", BGPAL_HUD_Y);
         if (save_record(game.score, game.chain_best, 1)) text_put_center(17, "NEW RECORD!", BGPAL_HUD_Y);
-        text_put_center(6, "THE CORE IS SILENT.", BGPAL_HUD);
-        text_put_center(7, "STEEL RETURNS HOME.", BGPAL_HUD);
-        text_put(6, 9, "SCORE", BGPAL_HUD_C);
-        text_num(17, 9, game.score, 7, BGPAL_HUD);
-        text_put(6, 11, "BEST CHAIN", BGPAL_HUD_C);
-        text_num(21, 11, game.chain_best, 3, BGPAL_HUD);
-        text_put(6, 13, "DESTROYED", BGPAL_HUD_C);
-        text_num(21, 13, game.kills, 3, BGPAL_HUD);
-        text_put(6, 15, "TOTAL TIME", BGPAL_HUD_C);
-        text_time(19, 15, game.total_time, BGPAL_HUD);
+        text_put_center(4, "THE CORE IS SILENT.", BGPAL_HUD);
+        text_put_center(5, "STEEL RETURNS HOME.", BGPAL_HUD);
+        text_put(6, 7, "SCORE", BGPAL_HUD_C);
+        text_num(17, 7, game.score, 7, BGPAL_HUD);
+        text_put(6, 9, "BEST CHAIN", BGPAL_HUD_C);
+        text_num(21, 9, game.chain_best, 3, BGPAL_HUD);
+        text_put(6, 11, "DESTROYED", BGPAL_HUD_C);
+        text_num(21, 11, game.kills, 3, BGPAL_HUD);
+        text_put(6, 13, "TOTAL TIME", BGPAL_HUD_C);
+        text_time(19, 13, game.total_time, BGPAL_HUD);
+        /* ステージ別ランク (今回のプレイ) */
+        text_put(6, 15, "RANKS", BGPAL_HUD_C);
+        for (int i = 0; i < 5; i++) {
+            int r = game.run_rank[i];
+            char c[2] = {r ? "CBAS"[r - 1] : '-', 0};
+            text_put(14 + i * 2, 15, c, r >= 3 ? BGPAL_HUD_Y : BGPAL_HUD);
+        }
         text_put_center(19, "THANK YOU FOR PLAYING", BGPAL_HUD_Y);
     }
     REG_BGHOFS(BG_SKY) = (u16)(t >> 2);
