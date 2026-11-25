@@ -138,6 +138,7 @@ static int body_overlap(const Body* a, const Body* b) {
 static void enemy_die(Ent* e) {
     int cx = px_center(e), cy = py_center(e);
     fx_spawn(FX_BOOM, cx - 8, cy - 8, 0);
+    fx_debris(cx, cy, 5);
     sfx_play(SFX_BOOM);
     shake_t = 6;
     shake_amp = 2;
@@ -174,6 +175,7 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop) {
     if (stop >= 6) {
         shake_t = 6;
         shake_amp = 2;
+        screen_flash(2);
     }
     if (e->hp <= 0) enemy_die(e);
 }
@@ -307,8 +309,11 @@ static void update_prop(Ent* e) {
         }
         break;
     case OBJ_GOAL:
-        if (player.state != PS_DEAD && player.state != PS_CLEAR && body_overlap(&e->b, &player.b)) {
-            game_stage_clear();
+        /* ゲートの列を通過すれば高さに関係なく反応 (飛び越し対策) */
+        if (player.state != PS_DEAD && player.state != PS_CLEAR) {
+            int gx = FROM_FP(e->b.x), px = FROM_FP(player.b.x);
+            if (px < gx + e->b.w && gx < px + player.b.w && FROM_FP(player.b.y) < FROM_FP(e->b.y) + e->b.h)
+                game_stage_clear();
         }
         break;
     case OBJ_HEAL:

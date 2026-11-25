@@ -217,33 +217,48 @@ static int cell_at(const DebugInfo* d, int cx, int cy) {
 static int bot_jump_hold;
 enum { BS_NONE, BS_INTRO, BS_IDLE, BS_SHOOT, BS_CHARGE, BS_STUN, BS_JUMP, BS_DEAD };
 
-/* ボス戦の戦術: 突進は飛び越し、着地の衝撃波はジャンプで避け、気絶中に連撃 */
+/* ボス戦の戦術: 突進は動き出してから飛び越し、着地の衝撃波は到達時間を見て跳ぶ、気絶中に連撃 */
+static int wave_jump_at = -1;
 static uint32_t boss_keys(const DebugInfo* d, const DebugInfo* prev, int t) {
     int pcx = d->px + 5;
     int dx = d->boss_x - pcx;
     int adx = dx < 0 ? -dx : dx;
+    int moving = d->boss_x != prev->boss_x;
     uint32_t toward = dx > 0 ? KRIGHT : KLEFT;
     uint32_t away = dx > 0 ? KLEFT : KRIGHT;
     uint32_t keys = 0;
+    if (prev->boss_state == BS_JUMP && d->boss_state != BS_JUMP) {
+        /* 衝撃波 (約 2.1px/f) が足元に来る少し前にジャンプ */
+        int eta = (adx - 14) * 256 / 0x220;
+        wave_jump_at = t + (eta > 12 ? eta - 12 : 0);
+    }
+    if (wave_jump_at >= 0 && t >= wave_jump_at) {
+        if (d->on_ground && bot_jump_hold == 0) bot_jump_hold = 24;
+        wave_jump_at = -1;
+    }
     switch (d->boss_state) {
     case BS_CHARGE:
-        /* 近づいてきたら飛び越す */
-        keys = away;
-        if (adx < 90 && d->on_ground && bot_jump_hold == 0) bot_jump_hold = 24;
-        if (!d->on_ground) keys = toward;
+        if (!moving) {
+            /* 予備動作中: 距離を取る */
+            keys = adx < 100 ? away : 0;
+        } else {
+            keys = 0;
+            if (adx < 72 && d->on_ground && bot_jump_hold == 0) bot_jump_hold = 24;
+            if (!d->on_ground) keys = toward;
+        }
         break;
     case BS_JUMP:
-        keys = away;
+        keys = adx < 60 ? away : 0;
         break;
     case BS_STUN:
         keys = adx > 26 ? toward : 0;
         if (t % 6 < 2) keys |= KB;
         break;
     default:
-        if (prev->boss_state == BS_JUMP && d->boss_state == BS_IDLE && bot_jump_hold == 0) bot_jump_hold = 24; /* 衝撃波 */
-        keys = adx > 30 ? toward : 0;
-        if (adx < 22) keys = away;
-        if (adx < 48 && t % 6 < 2) keys |= KB;
+        /* 剣先が届く間合い (35〜44px) を保って斬る */
+        keys = adx > 44 ? toward : 0;
+        if (adx < 34) keys = away;
+        if (adx < 50 && t % 18 < 2) keys = (keys & ~(KLEFT | KRIGHT)) | KB;
         break;
     }
     if (bot_jump_hold > 0) {
@@ -252,11 +267,14 @@ static uint32_t boss_keys(const DebugInfo* d, const DebugInfo* prev, int t) {
     }
     return keys;
 }
+
 static void bot_step(int t, DebugInfo* prev, int* stuck) {
     DebugInfo d;
     read_debug(&d);
     uint32_t keys = 0;
-    if (d.state == GS_PLAY && d.boss_hp > 0 && d.boss_state != BS_INTRO) {
+    if (d.state == GS_PLAY && d.boss_hp > 0 && d.boss_state == BS_INTRO) {
+        keys = 0;
+    } else if (d.state == GS_PLAY && d.boss_hp > 0) {
         keys = boss_keys(&d, prev, t);
     } else if (d.state == GS_PLAY) {
         keys |= KRIGHT;
@@ -409,9 +427,14 @@ int main(int argc, char** argv) {
         read_debug(&d);
         check(d.state == GS_PLAY && d.stage == 2, "ステージ3へ移動できる");
         int arena_x = d.level_w * 16 - 240;
-        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), arena_x + 40);
+        /* ボス直前のチェックポイントの少し手前へワープして歩いて入場 */
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), arena_x - 13 * 16);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
-        run(60, KRIGHT);
+        for (int i = 0; i < 400; i++) {
+            read_debug(&d);
+            if (d.boss_hp > 0) break;
+            run(1, KRIGHT);
+        }
         read_debug(&d);
         check(d.boss_hp > 0, "闘技場でボスが出現する");
         screenshot("boss_01_intro");
@@ -422,10 +445,14 @@ int main(int argc, char** argv) {
         DebugInfo prev = d;
         int stuck = 0;
         int min_hp = 99;
+        int out_of_arena = 0;
         for (int t = 0; t < 5400; t++) {
             read_debug(&d);
             if (d.boss_hp > 0 && d.boss_hp < min_hp) min_hp = d.boss_hp;
             if (t == 600) screenshot("boss_03_mid");
+            if (getenv("BOSS_LOG") && d.hp < prev.hp && d.state == GS_PLAY)
+                printf("  [hurt] t=%d hp %d->%d boss_state=%u dx=%d py=%d bossmove=%d\n", t, prev.hp, d.hp, d.boss_state, d.boss_x - d.px - 5, d.py, d.boss_x - prev.boss_x);
+            if (d.boss_hp > 0 && (d.boss_x < (int)d.cam_x || d.boss_x > (int)d.cam_x + 240)) out_of_arena++;
             if (d.state == GS_CLEAR || d.state == GS_ENDING) break;
             bot_step(t, &prev, &stuck);
         }
@@ -433,6 +460,7 @@ int main(int argc, char** argv) {
         read_debug(&d);
         print_debug("boss end");
         printf("  ボス残りHP: %d (最小 %d / 開始 %d)\n", d.boss_hp, min_hp, hp0);
+        check(out_of_arena == 0, "ボスが闘技場の外に出ない");
         check(min_hp < hp0 || d.state == GS_CLEAR || d.state == GS_ENDING, "ボスにダメージを与えられる");
         check(d.state == GS_CLEAR || d.state == GS_ENDING, "ボット戦術でボスを撃破できる (攻略可能性の検証)");
         screenshot("boss_04_end");

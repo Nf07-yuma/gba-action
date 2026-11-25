@@ -143,15 +143,16 @@ static void title_update(void) {
     REG_BGVOFS(BG_SKY) = 96;
     if (t == 1) {
         text_clear();
-        text_put_center(3, "=====================", BGPAL_HUD_C);
-        text_put_center(5, "S T E E L   C H A I N", BGPAL_HUD);
-        text_put_center(7, "=====================", BGPAL_HUD_C);
+        u16* m = SCREENBLOCK(SBB_HUD);
+        for (int y = 0; y < 6; y++)
+            for (int x = 0; x < 30; x++) m[(y + 1) * 32 + x] = logo_map[y * 30 + x];
+        text_put_center(8, "- ROBOT BLADE ACTION -", BGPAL_HUD_C);
         text_put_center(17, "B:SLASH  A:JUMP  R:DASH", BGPAL_HUD_C);
         text_put_center(19, "(C) 2026 STEEL CHAIN PROJECT", BGPAL_HUD);
     }
     if (t > 1) text_put_center(14, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
     oam_begin();
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 104, 72, 0, OBJPAL_NORMAL, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 104, 76, 0, OBJPAL_NORMAL, 0);
     if (key_hit(KEY_START | KEY_A)) {
         sfx_play(SFX_SELECT);
         game.stage = 0;
@@ -324,6 +325,7 @@ int main(void) {
     for (;;) {
         vsync();
         oam_end();
+        fx_flash_apply();
         hud_draw(0);
         if (game.state == GS_PLAY || game.state == GS_DEAD || game.state == GS_PAUSE) boss_hud();
         sound_update();

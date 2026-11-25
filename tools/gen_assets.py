@@ -115,6 +115,71 @@ BG_PAL_HUD_C[2] = (18, 31, 31)
 BG_PAL_HUD_C[3] = (4, 18, 24)
 
 
+# BG パレット 5: タイトルロゴ (鋼のグラデーション + 赤い鎖)
+BG_PAL_LOGO = [
+    (0, 0, 0),       # 0 透明
+    (1, 1, 4),       # 1 輪郭
+    (31, 31, 31),    # 2 ハイライト
+    (22, 26, 31),    # 3 鋼 明
+    (14, 18, 27),    # 4 鋼
+    (8, 10, 19),     # 5 鋼 暗
+    (4, 5, 12),      # 6 影
+    (31, 10, 8),     # 7 赤
+    (20, 3, 5),      # 8 赤 暗
+    (31, 22, 10),    # 9 赤 明
+    (18, 31, 31),    # 10 シアン
+    (6, 20, 26),     # 11 シアン暗
+    (0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0),
+]
+
+
+def gen_logo():
+    """タイトルロゴ 'STEEL CHAIN' (240x48)。5x7 フォントを 4 倍に拡大し、ベベルと輪郭を付ける"""
+    W, H = 240, 48
+    p = blank(W, H, 0)
+    SX, SY = 3, 4
+
+    def word(text, x0, y0, chain=False):
+        x = x0
+        mask = set()
+        for ch in text:
+            src = FONT_SRC[ch]
+            for gy, row in enumerate(src):
+                for gx, b in enumerate(row):
+                    if b == "1":
+                        for dy in range(SY):
+                            for dx in range(SX):
+                                mask.add((x + gx * SX + dx, y0 + gy * SY + dy))
+            x += 6 * SX
+        return mask
+
+    m1 = word("STEEL", 22, 8)
+    m2 = word("CHAIN", 130, 8)
+    for mask, red in ((m1, False), (m2, True)):
+        for (x, y) in mask:
+            ry = y - 8
+            if red:
+                c = 9 if ry < 6 else (7 if ry < 20 else 8)
+            else:
+                c = 2 if ry < 3 else (3 if ry < 10 else (4 if ry < 20 else 5))
+            # 右下の縁は暗く
+            if (x + 1, y) not in mask or (x, y + 1) not in mask:
+                c = 8 if red else 6
+            if (x - 1, y) not in mask or (x, y - 1) not in mask:
+                c = 9 if red else 2
+            p[y][x] = c
+        for (x, y) in mask:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (2, 2)):
+                q = (x + dx, y + dy)
+                if q not in mask and 0 <= q[0] < W and 0 <= q[1] < H and p[q[1]][q[0]] == 0:
+                    p[q[1]][q[0]] = 1
+    # 下線: シアンのエネルギーライン
+    for x in range(20, W - 20):
+        p[42][x] = 10 if (x // 4) % 2 == 0 else 11
+        p[43][x] = 11
+    return p
+
+
 def rgb15(c):
     r, g, b = c
     return r | (g << 5) | (b << 10)
@@ -747,10 +812,10 @@ def main():
         C.append(f"const u16 {name}[{len(vals)}] = {{\n{c_u16(vals)}\n}};")
 
     pal_block("pal_obj", [SPR_PAL, SPR_PAL_FLASH, SPR_PAL_ALT, SPR_PAL_HURT, SPR_PAL_GHOST])
-    pal_block("pal_bg", [BG_PAL_LEVEL, BG_PAL_SKY, BG_PAL_HUD, BG_PAL_HUD_Y, BG_PAL_HUD_C])
+    pal_block("pal_bg", [BG_PAL_LEVEL, BG_PAL_SKY, BG_PAL_HUD, BG_PAL_HUD_Y, BG_PAL_HUD_C, BG_PAL_LOGO])
     H += ["#define OBJPAL_NORMAL 0", "#define OBJPAL_FLASH 1", "#define OBJPAL_ALT 2", "#define OBJPAL_HURT 3", "#define OBJPAL_GHOST 4",
           "#define BGPAL_LEVEL 0", "#define BGPAL_SKY 1", "#define BGPAL_HUD 2", "#define BGPAL_HUD_Y 3",
-          "#define BGPAL_HUD_C 4", ""]
+          "#define BGPAL_HUD_C 4", "#define BGPAL_LOGO 5", ""]
 
     # ---- スプライト
     sprites = []
@@ -803,6 +868,17 @@ def main():
     hud_base = len(cb1)
     for name in HUD_TILE_ORDER:
         cb1.append(tile_bytes(hud[name], 0, 0))
+    # タイトルロゴ (CBB1 に追加, 重複排除)
+    logo_index = {}
+    logo_tiles = []
+    logo_base = len(cb1)
+    logo_map = tileize(gen_logo(), 240, 48, logo_tiles, logo_index, base=logo_base, pal=5)
+    # 透明タイルは 0 番を使う
+    blank_t = bytes(32)
+    logo_map = [0 if logo_tiles[(v & 0x3FF) - logo_base] == blank_t else v for v in logo_map]
+    cb1 += logo_tiles
+    H.append("extern const u16 logo_map[30 * 6];")
+    C.append(f"const u16 logo_map[30 * 6] = {{\n{c_u16(logo_map)}\n}};")
     if len(cb1) > 512:
         sys.exit(f"CBB1 タイル数超過: {len(cb1)}")
     # 遠景は CBB2 に単独配置

@@ -48,6 +48,7 @@ void oam_begin(void);
 void oam_end(void);
 /* 画面座標に描画。flip: 左右反転, pal: OBJPAL_*, prio: 0-3 */
 void oam_put(int spr, int x, int y, int flip, int pal, int prio);
+void oam_put_blend(int spr, int x, int y, int flip, int pal, int prio);
 void vsync(void);
 
 /* ---- テキスト (BG0) ---- */
@@ -151,7 +152,10 @@ int boss_x(void);
 void wave_fire(s32 x, s32 y, s32 vx);
 
 /* ---- fx.c ---- */
-enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH };
+enum { FX_BOOM, FX_SPARK, FX_DUST, FX_SLASH, FX_DEBRIS };
+void fx_debris(int x, int y, int n);
+void screen_flash(int frames);
+void fx_flash_apply(void);
 void fx_clear(void);
 void fx_spawn(int type, int x, int y, int flip);
 void fx_spawn_slash(int spr0, int x, int y, int flip);

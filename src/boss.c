@@ -22,7 +22,7 @@ static s16 hud_last = -1;
 
 #define BW 30
 #define BH 44
-#define BOSS_HP 48
+#define BOSS_HP 40
 
 int boss_active(void) { return boss.state != BS_NONE; }
 int boss_hp(void) { return boss.state == BS_NONE ? 0 : boss.hp; }
@@ -75,6 +75,23 @@ static void choose_next(void) {
     face_player();
 }
 
+/* 闘技場の左右端を壁として扱う移動 */
+static void boss_move(void) {
+    body_move(&boss.b);
+    if (boss_lock_x >= 0) {
+        s32 l = TO_FP(boss_lock_x + 4), r = TO_FP(boss_lock_x + SCREEN_W - 4 - BW);
+        if (boss.b.x < l) {
+            boss.b.x = l;
+            boss.b.hit_wall = 1;
+            boss.b.vx = 0;
+        } else if (boss.b.x > r) {
+            boss.b.x = r;
+            boss.b.hit_wall = 1;
+            boss.b.vx = 0;
+        }
+    }
+}
+
 static void gravity(void) {
     boss.b.vy += 0x50;
     if (boss.b.vy > 0x600) boss.b.vy = 0x600;
@@ -125,6 +142,7 @@ static void boss_hit_check(void) {
         boss.t = 0;
         bullets_clear();
         music_stop();
+        screen_flash(6);
         game_add_score(5000);
         game.kills++;
     }
@@ -146,7 +164,7 @@ void boss_update(void) {
     switch (boss.state) {
     case BS_INTRO:
         gravity();
-        body_move(&boss.b);
+        boss_move();
         if (boss.b.on_ground && boss.t < 200 && boss.t > 2 && boss.b.vy == 0 && !(boss.flash)) {
             if (boss.t < 120) {
                 if (boss.next == 0) {
@@ -170,7 +188,7 @@ void boss_update(void) {
         int dist = ABS(pcx() - bcx());
         boss.b.vx = dist > 48 ? boss.dir * (boss.phase ? 0xA0 : 0x70) : 0;
         gravity();
-        body_move(&boss.b);
+        boss_move();
         if (boss.t > (u16)(boss.phase ? 30 : 55)) choose_next();
         break;
     }
@@ -178,7 +196,7 @@ void boss_update(void) {
     case BS_SHOOT: {
         boss.b.vx = 0;
         gravity();
-        body_move(&boss.b);
+        boss_move();
         int n = boss.phase ? 4 : 3;
         for (int i = 0; i < n; i++)
             if (boss.t == (u16)(20 + i * 16)) shoot_at_player(boss.phase && (i & 1));
@@ -198,7 +216,7 @@ void boss_update(void) {
             boss.b.vx = boss.dir * (boss.phase ? 0x480 : 0x3A0);
             if ((boss.t & 3) == 0) fx_spawn(FX_DUST, bcx() - boss.dir * 14 - 4, FROM_FP(boss.b.y) + BH - 8, boss.dir > 0);
         }
-        body_move(&boss.b);
+        boss_move();
         if (boss.b.hit_wall && boss.t >= 36) {
             boss.state = BS_STUN;
             boss.t = 0;
@@ -217,7 +235,7 @@ void boss_update(void) {
     case BS_STUN:
         gravity();
         if (boss.b.on_ground) boss.b.vx = 0;
-        body_move(&boss.b);
+        boss_move();
         if ((boss.t & 15) == 0) fx_spawn(FX_SPARK, bcx() - 4 + rng_range(16) - 8, FROM_FP(boss.b.y) + rng_range(10), 0);
         if (boss.t > (u16)(boss.phase ? 70 : 100)) {
             boss.state = BS_IDLE;
@@ -235,7 +253,7 @@ void boss_update(void) {
             boss.b.vx = boss.target_vx;
         }
         gravity();
-        body_move(&boss.b);
+        boss_move();
         if (boss.t > 16 && boss.b.on_ground) {
             /* 着地: 衝撃波 */
             int gy = FROM_FP(boss.b.y) + BH;
@@ -256,6 +274,8 @@ void boss_update(void) {
         boss.b.vx = 0;
         if ((boss.t & 7) == 0 && boss.t < 110) {
             fx_spawn(FX_BOOM, FROM_FP(boss.b.x) + rng_range(BW + 16) - 16, FROM_FP(boss.b.y) + rng_range(BH) - 8, 0);
+            fx_debris(bcx(), bcy(), 2);
+            if ((boss.t & 31) == 0) screen_flash(3);
             sfx_play(SFX_BOOM);
             shake_t = 6;
             shake_amp = 3;
@@ -270,7 +290,7 @@ void boss_update(void) {
 
     boss_hit_check();
     /* 接触ダメージ (気絶中は無害) */
-    if (boss.state != BS_STUN && boss.state != BS_DEAD && boss.state != BS_NONE) {
+    if (boss.state != BS_STUN && boss.state != BS_DEAD && boss.state != BS_NONE && boss.state != BS_INTRO) {
         int x0 = FROM_FP(boss.b.x) + 2, y0 = FROM_FP(boss.b.y) + 6;
         int px = FROM_FP(player.b.x), py = FROM_FP(player.b.y);
         if (px < x0 + BW - 4 && x0 < px + player.b.w && py < y0 + BH - 6 && y0 < py + player.b.h)
