@@ -15,6 +15,8 @@
 | ![最終ボス OVERLORD CORE](docs/images/lastboss.png) | ![エンディング](docs/images/ending.png) |
 | ![CHAIN ポップアップ](docs/images/chain_popup.png) | ![ボス撃破のスローモーション](docs/images/boss_finish.png) |
 | ![難易度 HARD](docs/images/title_hard.png) | ![スタッフロール](docs/images/staffroll.png) |
+| ![爆撃ドローン](docs/images/bomber.png) | ![ボス登場の WARNING](docs/images/boss_warning.png) |
+| ![鋳造所の火の粉](docs/images/stage3_embers.png) | ![クリア画面とランク](docs/images/stage_clear.png) |
 
 （画像はすべて CI と同じヘッドレスランナーで実機ROMを動かして撮影したもの。`build/runner steel_chain.gba <出力先> demo1_0` で連番フレームを書き出せます）
 
@@ -46,7 +48,9 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 - **全5ステージ**: 工場 → スカイウェイ → 鋳造所(ボス) → データハイウェイ → 中枢コア(最終ボス)
 - **ボス戦**: 工場の守護ロボ GUARDIAN。突進を壁に誘導すると気絶して大チャンス
 - **最終ボス**: OVERLORD CORE。装甲が開いて目が露出したときだけ攻撃が通る
-- **ランク評価**: ステージクリア時にタイム・最大 CHAIN・ミス回数・残り HP で S/A/B/C を判定
+- **ランク評価とベストタイム**: ステージクリア時にタイム・最大 CHAIN・ミス回数・残り HP で S/A/B/C を判定。ステージ別の最高ランクとベストタイムを保存し、タイトルのステージ選択に表示
+- **爆撃ドローン**: 頭上から爆弾を落とす敵。爆弾は斬って消せる
+- **環境演出**: 鋳造所の火の粉、データハイウェイのデータ片、中枢コアの光の粒
 - **CHAIN の節目演出**: 10 / 25 / 50 / 100 CHAIN でポップアップとボーナス
 - **ボス撃破演出**: とどめの一撃でヒットストップ → スローモーションで爆発
 - **難易度 3 段階**: EASY（HP12・残機5）/ NORMAL（HP8）/ HARD（HP6・敵弾が速い・回復が出にくい）
