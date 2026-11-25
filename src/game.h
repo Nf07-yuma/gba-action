@@ -237,6 +237,8 @@ extern u16 save_best_chain;
 extern u8 save_cleared;
 extern u8 save_reached;
 void save_reach_stage(int stage);
+extern u8 save_rank[5];
+int save_rank_stage(int stage, int rank);
 void save_load(void);
 int save_record(u32 score, u16 chain, int cleared);
 

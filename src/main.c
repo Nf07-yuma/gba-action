@@ -360,6 +360,7 @@ static void clear_update(void) {
         char buf[12] = "RANK  ?";
         buf[6] = ranks[r];
         text_put_center(16, buf, r >= 2 ? BGPAL_HUD_Y : BGPAL_HUD);
+        if (!game.demo && save_rank_stage(game.stage, r)) text_put(20, 16, "BEST!", BGPAL_HUD_C);
         sfx_play(r == 3 ? SFX_CHARGE : SFX_CHECK);
         g_debug.rank = (u32)r;
         g_debug.rank_hist |= (u32)(r + 1) << (game.stage * 4);
