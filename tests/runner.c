@@ -773,7 +773,9 @@ int main(int argc, char** argv) {
         read_debug(&d);
         check(d.boss_hp > 0, "闘技場でボスが出現する");
         screenshot("boss_01_intro");
-        run(120, 0);
+        run(76, 0);
+        screenshot("boss_01b_warning");
+        run(44, 0);
         screenshot("boss_02_fight");
         int hp0 = d.boss_hp;
         /* ボット戦術でボスと戦う */
