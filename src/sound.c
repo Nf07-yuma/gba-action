@@ -102,6 +102,11 @@ static void play_step(void) {
         case 3: noise(0x4100, 0x0008); break; /* ハイハット */
         }
     }
+    if (!song->loop && pos_lead + 1 >= song->lead_len) {
+        /* ジングルは最後まで鳴らしたら止める */
+        song = 0;
+        return;
+    }
     if (++pos_lead >= song->lead_len) pos_lead = 0;
     if (++pos_bass >= song->bass_len) pos_bass = 0;
     if (++pos_drum >= song->drum_len) pos_drum = 0;
@@ -111,5 +116,6 @@ void sound_update(void) {
     if (noise_busy) noise_busy--;
     if (!song || paused) return;
     if (tick == 0) play_step();
+    if (!song) return;
     if (++tick >= song->speed) tick = 0;
 }

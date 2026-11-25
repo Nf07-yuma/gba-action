@@ -14,10 +14,12 @@ jobs:
   build-test:
     name: ビルド & ヘッドレステスト
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
       - name: ツールチェーンのインストール
+        timeout-minutes: 8
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libmgba-dev zlib1g-dev
@@ -35,6 +37,9 @@ jobs:
         run: |
           build/runner steel_chain.gba build/boss-out boss
           build/runner steel_chain.gba build/boss5-out boss5
+
+      - name: 全曲の録音 (試聴用 WAV)
+        run: build/runner steel_chain.gba build/music-out music
 
       - name: ステージ別ボット検証 (レポート)
         continue-on-error: true
@@ -55,6 +60,7 @@ jobs:
             steel_chain.gba
             build/test-out/*.png
             build/test-out/*.wav
+            build/music-out/*.wav
             build/bot-out/*.png
             build/boss-out/*.png
             build/boss5-out/*.png

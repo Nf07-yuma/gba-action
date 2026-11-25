@@ -21,6 +21,7 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 | B | 斬る（連打で 3 段コンボ、空中では回転斬り） |
 | R / L | ダッシュ（無敵時間あり、空中でも 1 回） |
 | START | 開始 / ポーズ |
+| 十字キー左右（タイトル） | 難易度 NORMAL / EASY の切り替え |
 
 ### ゲームの特徴
 
@@ -79,7 +80,7 @@ tests/runner.c  ヘッドレステストランナー (libmgba)
 - `tools/compose_player.py` … 主人公のポーズ（関節座標）を編集して `make sprites` で再合成
 - `assets/music/*.txt` … BGM の楽譜（`C-5` 音符、`---` 伸ばす、`...` 消音、ドラムは `K`=キック `S`=スネア `H`=ハット）
 - `tools/build_levels.py` … ステージ 2 以降を区画の組み合わせで生成（`python3 tools/build_levels.py`）
-- `assets/levels/*.txt` … ステージ（`#`=壁 `=`=足場 `^`=トゲ `P`=開始位置 `c/d/t/j/s`=敵 `C`=中間地点 `G`=ゴール `+`=回復 `L/l`=横に動く足場 `V/v`=縦に動く足場（小文字は逆位相） `B`=ボス）
+- `assets/levels/*.txt` … ステージ（`#`=壁 `=`=足場 `^`=トゲ `P`=開始位置 `c/d/t/j/s`=敵 `C`=中間地点 `G`=ゴール `+`=回復 `L/l`=横に動く足場 `V/v`=縦に動く足場（小文字は逆位相） `>`/`<`=ベルトコンベア `m`=浮遊機雷 `B`/`Z`=ボス）
 
 ## CI / CD
 

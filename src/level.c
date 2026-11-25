@@ -20,6 +20,8 @@ static int metatile_at(int cx, int cy) {
     int c = raw & 0x0F;
     switch (c) {
     case CELL_SOLID: {
+        if ((raw >> 4) == 1) return MT_CONV_R0;
+        if ((raw >> 4) == 2) return MT_CONV_L0;
         int up = level_solid(cx, cy - 1) || cy == 0;
         int l = cx == 0 || level_solid(cx - 1, cy);
         int r = cx == level.w - 1 || level_solid(cx + 1, cy);
@@ -63,6 +65,15 @@ void level_scroll_update(void) {
     for (int tx = t0; tx <= t1; tx++) {
         if (tx < 0 || tx >= level.w * 2) continue;
         if (col_loaded[tx & 63] != tx + 1) write_column(tx);
+    }
+    /* コンベアの矢印アニメーション */
+    static u8 conv_t;
+    if ((++conv_t & 3) == 0) {
+        const u32* a = &conv_anim[((conv_t >> 2) & 3) * 32];
+        dma3_copy32(CHARBLOCK(CBB_LEVEL) + CONV_TILE_R0 * 16, a, 8);
+        dma3_copy32(CHARBLOCK(CBB_LEVEL) + CONV_TILE_R1 * 16, a + 8, 8);
+        dma3_copy32(CHARBLOCK(CBB_LEVEL) + CONV_TILE_L0 * 16, a + 16, 8);
+        dma3_copy32(CHARBLOCK(CBB_LEVEL) + CONV_TILE_L1 * 16, a + 24, 8);
     }
     int sx = cam_x, sy = cam_y;
     if (shake_t > 0) {
@@ -109,10 +120,22 @@ static int row_any(int cy, int cx0, int cx1, int type) {
     return 0;
 }
 
+/* 足元のコンベア: 1=右, -1=左, 0=なし */
+int body_conveyor(const Body* b) {
+    if (!b->on_ground) return 0;
+    int fb = FROM_FP(b->y) + b->h;
+    int cx = (FROM_FP(b->x) + b->w / 2) >> 4, cy = fb >> 4;
+    if (cx < 0 || cx >= level.w || cy < 0 || cy >= level.h) return 0;
+    u8 raw = level.def->cells[cy * level.w + cx];
+    if ((raw & 0x0F) != CELL_SOLID) return 0;
+    return (raw >> 4) == 1 ? 1 : (raw >> 4) == 2 ? -1 : 0;
+}
+
 void body_move(Body* b) {
+    int conv = body_conveyor(b);
     b->hit_wall = 0;
-    /* X 移動 */
-    s32 nx = b->x + b->vx;
+    /* X 移動 (コンベアの上なら流される) */
+    s32 nx = b->x + b->vx + conv * 0x90;
     int top = FROM_FP(b->y), bot = FROM_FP(b->y) + b->h - 1;
     if (b->vx > 0) {
         int right = FROM_FP(nx) + b->w - 1;

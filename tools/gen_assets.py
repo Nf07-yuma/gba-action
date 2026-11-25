@@ -364,6 +364,35 @@ def gen_metatiles():
     mt["steel_l"] = steel(left=True)
     mt["steel_r"] = steel(right=True)
 
+    # ベルトコンベア (phase で矢印が流れる)
+    def conveyor(direction, phase):
+        p = steel()
+        rect(p, 0, 0, 15, 7, 2)
+        rect(p, 0, 0, 15, 0, 6)
+        rect(p, 0, 7, 15, 7, 1)
+        rect(p, 0, 1, 15, 1, 3)
+        rect(p, 0, 6, 15, 6, 3)
+        for x in range(16):
+            for y in range(2, 6):
+                # シェブロン: 右向きなら '>' 形
+                d = abs(y - 3.5)
+                xx = (x - phase * 2 * direction) % 8
+                if direction > 0:
+                    on = int(xx + d) % 8 in (2, 3)
+                else:
+                    on = int(xx - d) % 8 in (4, 5)
+                if on:
+                    p[y][x] = 7
+        # ローラー
+        for x in (1, 7, 13):
+            p[8][x] = 6
+            p[8][x + 1] = 5
+        return p
+
+    for ph in range(4):
+        mt[f"conv_r{ph}"] = conveyor(1, ph)
+        mt[f"conv_l{ph}"] = conveyor(-1, ph)
+
     # 足場(一方通行): 鉄骨トラス
     p = blank(16, 16, 0)
     rect(p, 0, 0, 15, 0, 6)
@@ -434,7 +463,7 @@ def gen_metatiles():
 METATILE_ORDER = [
     "empty", "steel", "steel_b", "steel_c", "steel_top", "steel_top_l", "steel_top_r",
     "steel_top_lr", "steel_l", "steel_r", "girder", "spikes",
-    "back_pipe", "back_window", "back_grid", "back_plain",
+    "back_pipe", "back_window", "back_grid", "back_plain", "conv_r0", "conv_l0",
 ]
 
 # ---------------------------------------------------------------------------
@@ -671,6 +700,7 @@ OBJ_TYPES = {
     "l": 10,  # 横に動く足場 (逆位相)
     "v": 11,  # 縦に動く足場 (逆位相)
     "Z": 8,   # 最終ボス
+    "m": 12,  # 浮遊機雷
 }
 OBJ_PARAMS = {"l": 32, "v": 32, "Z": 1}
 BACK_KINDS = {"p": 0, "w": 1, "g": 2, "b": 3}
@@ -701,6 +731,10 @@ def load_level(path):
             back = 0xFF
             if ch == "#":
                 c = CELL_SOLID
+            elif ch == ">":
+                c = CELL_SOLID | (1 << 4)   # 右へ流れるコンベア
+            elif ch == "<":
+                c = CELL_SOLID | (2 << 4)   # 左へ流れるコンベア
             elif ch == "=":
                 c = CELL_ONEWAY
             elif ch == "^":
@@ -727,7 +761,9 @@ def load_level(path):
     # 背景装飾の種類を cells の上位ビットへ
     packed = []
     for c, b in zip(cells, backs):
-        if c == CELL_BACK:
+        if c & 0xF0:
+            packed.append(c)
+        elif c == CELL_BACK:
             packed.append(c | (b << 4))
         else:
             packed.append(c)
@@ -766,6 +802,7 @@ def parse_note(tok, where):
 
 def load_song(path):
     speed = 8
+    loop = 1
     chans = {"lead": [], "bass": [], "drum": []}
     cur = None
     with open(path, encoding="utf-8") as f:
@@ -773,6 +810,9 @@ def load_song(path):
             line = raw.split(";")[0].strip() if not raw.startswith(";speed") else raw.strip()
             if raw.startswith(";speed"):
                 speed = int(raw.split("=")[1])
+                continue
+            if raw.startswith(";loop"):
+                loop = int(raw.split("=")[1])
                 continue
             if not line:
                 continue
@@ -791,7 +831,7 @@ def load_song(path):
     for k in chans:
         if not chans[k]:
             chans[k] = [MUS_OFF]
-    return speed, chans
+    return speed, loop, chans
 
 
 def freq_tables():
@@ -889,6 +929,22 @@ def main():
     for name in METATILE_ORDER:
         H.append(f"    MT_{name.upper()},")
     H.append("    MT_COUNT\n};")
+    # コンベアの上段タイル (左/右) のアニメーション 4 コマ
+    conv_idx = []
+    conv_anim = b""
+    for nm in ("conv_r", "conv_l"):
+        base_tiles = [tile_bytes(mts[nm + "0"], tx, 0) for tx in (0, 8)]
+        conv_idx += [index[t] for t in base_tiles]
+    for ph in range(4):
+        for nm in ("conv_r", "conv_l"):
+            for tx in (0, 8):
+                conv_anim += tile_bytes(mts[f"{nm}{ph}"], tx, 0)
+    H.append(f"#define CONV_TILE_R0 {conv_idx[0]}")
+    H.append(f"#define CONV_TILE_R1 {conv_idx[1]}")
+    H.append(f"#define CONV_TILE_L0 {conv_idx[2]}")
+    H.append(f"#define CONV_TILE_L1 {conv_idx[3]}")
+    H.append("extern const u32 conv_anim[4 * 4 * 8];")
+    C.append(f"const u32 conv_anim[4 * 4 * 8] = {{\n{c_bytes_as_u32(conv_anim)}\n}};")
     H.append(f"extern const u32 level_tiles[{len(tiles) * 8}];")
     H.append(f"#define LEVEL_TILE_COUNT {len(tiles)}")
     H.append(f"extern const u16 metatiles[MT_COUNT * 4];")
@@ -948,7 +1004,7 @@ def main():
           "#define CELL_BACK 4"]
     for k, v in OBJ_TYPES.items():
         pass
-    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD, OBJ_LIFT_H, OBJ_LIFT_V };"]
+    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD, OBJ_LIFT_H, OBJ_LIFT_V, OBJ_MINE };"]
     level_dir = os.path.join(ASSETS, "levels")
     level_files = sorted(f for f in os.listdir(level_dir) if f.endswith(".txt"))
     lv_names = []
@@ -980,7 +1036,7 @@ def main():
     H.append("extern const u16 freq_wave[128];")
     C.append(f"const u16 freq_square[128] = {{\n{c_u16(sq)}\n}};")
     C.append(f"const u16 freq_wave[128] = {{\n{c_u16(wv)}\n}};")
-    H.append("typedef struct { const u8* lead; const u8* bass; const u8* drum; u16 lead_len, bass_len, drum_len; u8 speed; } Song;")
+    H.append("typedef struct { const u8* lead; const u8* bass; const u8* drum; u16 lead_len, bass_len, drum_len; u8 speed, loop; } Song;")
     H.append("#define MUS_HOLD 0")
     H.append("#define MUS_OFF 1")
     music_dir = os.path.join(ASSETS, "music")
@@ -992,10 +1048,10 @@ def main():
     H.append("extern const Song songs[SONG_COUNT];")
     entries = []
     for i, fn in enumerate(song_files):
-        speed, ch = load_song(os.path.join(music_dir, fn))
+        speed, loop, ch = load_song(os.path.join(music_dir, fn))
         for k in ("lead", "bass", "drum"):
             C.append(f"static const u8 song{i}_{k}[{len(ch[k])}] = {{\n{c_u8(ch[k])}\n}};")
-        entries.append(f"    {{ song{i}_lead, song{i}_bass, song{i}_drum, {len(ch['lead'])}, {len(ch['bass'])}, {len(ch['drum'])}, {speed} }},")
+        entries.append(f"    {{ song{i}_lead, song{i}_bass, song{i}_drum, {len(ch['lead'])}, {len(ch['bass'])}, {len(ch['drum'])}, {speed}, {loop} }},")
     C.append("const Song songs[SONG_COUNT] = {")
     C += entries
     C.append("};")
