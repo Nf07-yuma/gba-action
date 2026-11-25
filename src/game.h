@@ -294,6 +294,7 @@ typedef struct {
     u32 rank_hist;    /* ステージごとのランク+1 (4bit x 5) */
     u32 ambient;      /* 環境演出の粒の数 */
     u32 best_time;    /* 直近のクリアでベストタイムを更新したら 1 */
+    u32 combo;        /* 攻撃中の段 (0-2 地上, 3 空中, 4 ダッシュ斬り) | 攻撃中フラグ 0x100 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

@@ -31,13 +31,14 @@ typedef struct {
     u8 sfx;
 } AtkDef;
 
-/* 0-2: 地上コンボ, 3: 空中攻撃 */
-static const AtkDef atk_defs[4] = {
+/* 0-2: 地上コンボ, 3: 空中攻撃, 4: ダッシュ斬り (ダッシュ中に B。盾を崩し、2 段目へつながる) */
+static const AtkDef atk_defs[5] = {
     /* len act0 act1 chain  bx   by  bw  bh dmg  kbx     kby   stop spr                fx              fxx fxy lunge  sfx */
     { 17, 2, 6, 6,    -2, -8, 32, 32, 1, 0x180, -0x100, 3, SPR_PLAYER_ATK1, SPR_SLASH1_0, 2, -6, 0x160, SFX_SLASH },
     { 17, 2, 6, 6,    -2, -20, 30, 44, 1, 0x0C0, -0x3C0, 3, SPR_PLAYER_ATK2, SPR_SLASH2_0, 2, -12, 0x120, SFX_SLASH },
     { 26, 4, 9, 0,    -2, -14, 36, 44, 3, 0x440, -0x2C0, 7, SPR_PLAYER_ATK3, SPR_SLASH3_0, 4, -6, 0x200, SFX_SLASH3 },
     { 20, 2, 10, 0,  -21, -10, 42, 42, 1, 0x200, -0x200, 3, SPR_PLAYER_AIRATK, SPR_SLASHAIR_0, -11, -10, 0, SFX_SLASH },
+    { 20, 2, 8, 10,   -2, -8, 36, 32, 2, 0x380, -0x200, 5, SPR_PLAYER_ATK3, SPR_SLASH1_0, 4, -6, 0x2C0, SFX_SLASH3 },
 };
 
 static s32 ghost_x[3], ghost_y[3];
@@ -140,7 +141,7 @@ static void start_attack(int step) {
     if (player.attack_id >= 0xF0) player.attack_id = 1; /* 0xF0- は斬撃波用 */
     player.hit_any = 0;
     if (player.attack_id == 0) player.attack_id = 1;
-    if (step < 3) {
+    if (step != 3) {
         player.b.vx = player.dir * a->lunge;
         /* 崖際では踏み込まない (攻撃で穴に落ちないように) */
         if (player.b.on_ground) {
@@ -333,7 +334,7 @@ void player_update(void) {
         p->atk_t++;
         if (key_hit(KEY_B)) p->queued = 1;
         /* 摩擦で踏み込みを減速 */
-        if (p->combo < 3) {
+        if (p->combo != 3) {
             if (p->b.vx > 0) p->b.vx = MAX(0, p->b.vx - 0x28);
             else if (p->b.vx < 0) p->b.vx = MIN(0, p->b.vx + 0x28);
             /* 攻撃中でも向きは入れ替え可能(発生前のみ) */
@@ -345,10 +346,10 @@ void player_update(void) {
             apply_horizontal_input(ACC_AIR, RUN_MAX);
         }
         apply_gravity();
-        if (p->combo < 3 && a->chain_at && p->atk_t >= a->chain_at && p->queued) {
+        if (p->combo != 3 && a->chain_at && p->atk_t >= a->chain_at && p->queued) {
             if (key_down(KEY_LEFT)) p->dir = -1;
             if (key_down(KEY_RIGHT)) p->dir = 1;
-            start_attack(p->combo + 1);
+            start_attack(p->combo == 4 ? 1 : p->combo + 1);
             break;
         }
         /* 硬直のキャンセル: ジャンプ / ダッシュ */
@@ -381,8 +382,9 @@ void player_update(void) {
             p->b.vx = p->dir * RUN_MAX;
         }
         if (key_hit(KEY_B)) {
+            /* 地上ならダッシュの勢いのまま突進斬り、空中なら回転斬り */
             p->b.vx = p->dir * RUN_MAX;
-            start_attack(p->b.on_ground ? 0 : 3);
+            start_attack(p->b.on_ground ? 4 : 3);
         } else if (p->jump_buf && p->coyote) {
             do_jump();
             p->b.vx = p->dir * (RUN_MAX + 0x60);

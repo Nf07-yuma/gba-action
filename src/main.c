@@ -442,6 +442,7 @@ static void debug_publish(void) {
         for (int k = 0; k < MAX_PWAVE; k++) n += player_wave_box(k, &a, &b, &c, &d2, &id);
         g_debug.pwaves = (u32)n;
         g_debug.charge = player.charge;
+    g_debug.combo = player.combo | (player.state == PS_ATTACK ? 0x100 : 0);
     }
     g_debug.boss_state = (u32)boss_state_id();
     g_debug.boss_x = boss_x();
