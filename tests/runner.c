@@ -694,6 +694,14 @@ int main(int argc, char** argv) {
             screenshot("stage_clear_rank");
             printf("  ランク: %c\n", "CBAS"[d.rank & 3]);
             check(d.rank_hist != 0, "クリア画面でランク評価が出る");
+            uint32_t cl = 0;
+            for (int i = 0; i < 4; i++) cl |= (uint32_t)core->busRead8(core, 0x0E00000C + i) << (i * 8);
+            uint32_t saved = (cl >> (16 + st * 3)) & 7;
+            check(saved == (d.rank & 3) + 1, "ステージの最高ランクが SRAM に保存される");
+            /* リセット後のタイトルにステージの最高ランクが出る */
+            core->reset(core);
+            run(120, 0);
+            screenshot("title_best_rank");
         }
     } else if (strncmp(scenario, "boss", 4) == 0) {
         /* ボス戦へ直行し、ボスの出現・攻撃・被弾を検証 (boss=ステージ3, boss5=ステージ5) */

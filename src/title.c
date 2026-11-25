@@ -118,16 +118,19 @@ void title_update(void) {
     if (t > 1) {
         text_put_center(10, game.easy ? "<  EASY   >" : game.hard ? "<  HARD   >" : "<  NORMAL >",
                         game.easy ? BGPAL_HUD_C : game.hard ? BGPAL_HUD_Y : BGPAL_HUD);
-        if (save_reached > 0) {
-            char buf[16] = "STAGE 1  ^v";
+        if (save_reached > 0 || save_rank[0]) {
+            /* 開始ステージと、そのステージの最高ランク */
+            char buf[24] = "STAGE 1 ^v BEST -";
             buf[6] = (char)('1' + title_cursor);
+            if (!save_reached) buf[8] = buf[9] = ' ';
+            if (save_rank[title_cursor]) buf[16] = "CBAS"[save_rank[title_cursor] - 1];
             text_put_center(11, buf, title_cursor ? BGPAL_HUD_Y : BGPAL_HUD);
         }
         text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
     }
     oam_begin();
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 28, 74, 0, OBJPAL_NORMAL, 0);
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 180, 74, 1, OBJPAL_GHOST, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 14, 74, 0, OBJPAL_NORMAL, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 194, 74, 1, OBJPAL_GHOST, 0);
     if (t > 20 && key_hit(KEY_START | KEY_A)) {
         sfx_play(SFX_SELECT);
         game.stage = (u8)title_cursor;
