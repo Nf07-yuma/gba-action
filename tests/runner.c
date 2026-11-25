@@ -583,6 +583,27 @@ int main(int argc, char** argv) {
         check(out_of_arena == 0, "ボスが闘技場の外に出ない");
         check(min_hp < hp0 || d.state == GS_CLEAR || d.state == GS_ENDING, "ボスにダメージを与えられる");
         check(d.state == GS_CLEAR || d.state == GS_ENDING, "ボット戦術でボスを撃破できる (攻略可能性の検証)");
+        if (bst == 4 && (d.state == GS_CLEAR || d.state == GS_ENDING)) {
+            /* 最終ボス撃破 → エンディング → ハイスコアが SRAM に保存される */
+            for (int i = 0; i < 400 && d.state != GS_ENDING; i++) {
+                run(1, i % 30 == 0 ? KSTART : 0);
+                read_debug(&d);
+            }
+            run(30, 0);
+            check(d.state == GS_ENDING, "最終ボス撃破後にエンディングへ進む");
+            screenshot("boss_05_ending");
+            uint32_t magic = 0, hs = 0;
+            for (int i = 0; i < 4; i++) {
+                magic |= (uint32_t)core->busRead8(core, 0x0E000000 + i) << (i * 8);
+                hs |= (uint32_t)core->busRead8(core, 0x0E000004 + i) << (i * 8);
+            }
+            printf("  SRAM: magic=%08X hiscore=%u\n", magic, hs);
+            check(magic == 0x31435453u && hs == d.score, "ハイスコアが SRAM に保存される");
+            /* リセット後のタイトルに記録が表示される */
+            core->reset(core);
+            run(120, 0);
+            screenshot("boss_06_title_hiscore");
+        }
         screenshot("boss_04_end");
     } else {
         DebugInfo prev = d;

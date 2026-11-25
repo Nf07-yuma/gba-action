@@ -11,6 +11,9 @@
 最新の ROM は [Releases](../../releases) から `steel_chain-build-*.gba` をダウンロードし、
 [mGBA](https://mgba.io/) などで開いてください。
 
+GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/` でブラウザからも遊べます（EmulatorJS 使用）。
+ハイスコアは SRAM に保存されます（エミュレータでは .sav ファイル）。
+
 | ボタン | 操作 |
 | --- | --- |
 | 十字キー | 移動 |
@@ -82,6 +85,7 @@ tests/runner.c  ヘッドレステストランナー (libmgba)
 
 - Pull Request ごとに GitHub Actions で ROM をビルドし、ヘッドレステストを実行（スクリーンショットは Artifacts に保存）
 - `main` へのマージで ROM を自動ビルドし、GitHub Releases に公開
+- 同時にブラウザ版（`web/index.html` + ROM）を GitHub Pages に公開（リポジトリ設定で Pages のソースを「GitHub Actions」にする必要あり）
 
 開発の進め方と今後の計画は [ROADMAP.md](ROADMAP.md) を参照してください。
 

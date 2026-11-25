@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEEL CHAIN - GBA</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0b0a18; color: #dfe6ff; font-family: system-ui, sans-serif; }
+  header { padding: 12px 16px; text-align: center; }
+  h1 { margin: 4px 0; letter-spacing: .2em; font-size: 22px; }
+  h1 span { color: #ff6a3d; }
+  #game { width: min(100vw, 720px); aspect-ratio: 3 / 2; margin: 0 auto; }
+  .help { max-width: 720px; margin: 12px auto; padding: 0 16px; font-size: 14px; line-height: 1.7; }
+  table { border-collapse: collapse; }
+  td { padding: 2px 10px 2px 0; }
+  a { color: #7fe8ff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>STEEL <span>CHAIN</span></h1>
+  <div>GBA 横スクロール・ロボットアクション（ブラウザ版）</div>
+</header>
+<div id="game"></div>
+<div class="help">
+  <p>操作（キーボード既定割り当て。画面のメニューから変更できます）</p>
+  <table>
+    <tr><td>移動</td><td>矢印キー</td></tr>
+    <tr><td>A: ジャンプ</td><td>X</td></tr>
+    <tr><td>B: 斬る（連打で3段コンボ）</td><td>Z</td></tr>
+    <tr><td>R / L: ダッシュ</td><td>W / Q</td></tr>
+    <tr><td>START</td><td>Enter</td></tr>
+  </table>
+  <p>ROM ファイル（.gba）は <a href="steel_chain.gba">こちら</a> からダウンロードして mGBA 等でも遊べます。</p>
+</div>
+<script>
+  EJS_player = "#game";
+  EJS_core = "gba";
+  EJS_gameName = "steel_chain";
+  EJS_gameUrl = "steel_chain.gba";
+  EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+  EJS_color = "#ff6a3d";
+  EJS_startOnLoaded = false;
+</script>
+<script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+</body>
+</html>

@@ -204,6 +204,13 @@ void game_on_player_dead(void);
 void game_boss_defeated(int x, int y);
 void hud_draw(int force);
 
+/* ---- save.c ---- */
+extern u32 save_hiscore;
+extern u16 save_best_chain;
+extern u8 save_cleared;
+void save_load(void);
+int save_record(u32 score, u16 chain, int cleared);
+
 /* ---- sound.c ---- */
 enum { SFX_JUMP, SFX_SLASH, SFX_SLASH3, SFX_HIT, SFX_BOOM, SFX_HURT, SFX_PICKUP, SFX_DASH, SFX_SHOT, SFX_SELECT, SFX_CHECK };
 void sound_init(void);
