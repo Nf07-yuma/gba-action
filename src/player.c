@@ -121,6 +121,15 @@ void player_init(s32 x, s32 y) {
 
 static int center_x(void) { return FROM_FP(player.b.x) + PW / 2; }
 
+/* (x, y) から下 depth セル以内に足場があるか */
+static int floor_below(int x, int y, int depth) {
+    for (int k = 0; k < depth; k++) {
+        int c = level_cell(x >> 4, (y >> 4) + k);
+        if (c == CELL_SOLID || c == CELL_ONEWAY) return 1;
+    }
+    return 0;
+}
+
 static void start_attack(int step) {
     const AtkDef* a = &atk_defs[step];
     player.state = PS_ATTACK;
@@ -218,8 +227,12 @@ void player_damage(int dmg, int from_x) {
     }
     player.state = PS_HURT;
     player.state_t = 0;
-    player.b.vx = (center_x() < from_x ? -1 : 1) * 0x200;
+    int kdir = center_x() < from_x ? -1 : 1;
+    player.b.vx = kdir * 0x200;
     player.b.vy = -0x300;
+    /* 崖際・動く足場の上では後ろに吹き飛ばさない (のけぞりで穴に落ちる理不尽な死を防ぐ) */
+    if (player.b.on_ground && !floor_below(center_x() + kdir * 24, FROM_FP(player.b.y) + PH + 2, 4))
+        player.b.vx = 0;
     player.inv = game.easy ? 120 : 90;
     shake_t = 8;
     shake_amp = 2;

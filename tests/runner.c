@@ -410,6 +410,7 @@ static void bot_step(int t, DebugInfo* prev, int* stuck) {
             if (cell_at(&d, front, cy) == C_SOLID || cell_at(&d, front, cy - 1) == C_SOLID) want_jump = 1;
             if (*stuck > 4) want_jump = 1;
         }
+        if (getenv("TRACE") && d.px > atoi(getenv("TRACE")) && d.px < atoi(getenv("TRACE")) + 320) printf("  [tr] t=%d px=%d py=%d og=%u lift=%d keys=%x L0=(%d,%d) L1=(%d,%d) hp=%d\n", t, d.px, d.py, d.on_ground, on_lift, keys, d.lifts[0], d.lifts[1], d.lifts[2], d.lifts[3], d.hp);
         if (getenv("JUMP_LOG") && want_jump && bot_jump_hold == 0) printf("  [jump] px=%d on_lift=%d stuck=%d below=%d\n", d.px, on_lift, *stuck, cell_at(&d, (d.px + 14) >> 4, cy + 1));
         if (want_jump && bot_jump_hold == 0) bot_jump_hold = 22;
         if (bot_jump_hold > 0) {
