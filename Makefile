@@ -17,7 +17,7 @@ SRCS    := $(wildcard src/*.c)
 OBJS    := $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS)) $(BUILD)/assets.o $(BUILD)/crt0.o
 ASSET_SRC := $(wildcard assets/*.txt assets/levels/*.txt assets/music/*.txt) tools/gen_assets.py
 
-.PHONY: all clean test assets sprites
+.PHONY: all clean test assets sprites FORCE
 
 all: $(TARGET).gba
 
@@ -34,6 +34,13 @@ sprites:
 $(BUILD)/%.o: src/%.c $(GEN)/assets.h src/game.h include/gba.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# ビルド番号 (git の短いハッシュ)。内容が変わったときだけ書き換えて無駄な再ビルドを避ける
+$(GEN)/version.h: FORCE
+	@mkdir -p $(GEN)
+	@v=$$(git rev-parse --short=7 HEAD 2>/dev/null || echo dev); \
+	 echo "#define GAME_VERSION \"$$v\"" > $@.new; cmp -s $@.new $@ || cp $@.new $@
+$(BUILD)/title.o: $(GEN)/version.h
 
 $(BUILD)/assets.o: $(GEN)/assets.c $(GEN)/assets.h
 	$(CC) $(CFLAGS) -c $< -o $@
