@@ -2,6 +2,7 @@
 #include "game.h"
 
 Game game;
+static u8 loading_frame; /* マップ全再描画などの読み込みフレーム (計測対象外) */
 __attribute__((section(".ewram_debug"))) volatile DebugInfo g_debug;
 
 static u32 stage_start_score;
@@ -114,6 +115,7 @@ static void stage_begin(int respawn) {
     game.hitstop = 0;
     camera_snap(game.checkpoint_x, game.checkpoint_y - 12);
     level_force_redraw();
+    loading_frame = 2;
     hud_draw(1);
 }
 
@@ -321,11 +323,17 @@ static void ending_update(void) {
 }
 
 /* --------------------------------------------------------------- main */
+static volatile u32 vblank_count;
+static void on_irq(u32 flags) {
+    if (flags & IRQ_VBLANK) vblank_count++;
+}
+
 int main(void) {
     REG_WAITCNT = 0x4317;
     video_init();
     save_load();
     sound_init();
+    irq_user_hook = on_irq;
     REG_DISPSTAT |= 0x0008;
     REG_IE = IRQ_VBLANK;
     REG_IME = 1;
@@ -333,8 +341,23 @@ int main(void) {
     g_debug.magic = DEBUG_MAGIC;
     title_enter();
 
+    u32 last_vb = 0;
     for (;;) {
+        /* 処理時間の計測: VBlank 開始(160) からの経過走査線 */
+        u32 v = REG_VCOUNT;
+        u32 lines = (v + 228 - 160) % 228;
+        int measure = game.frame > 2 && !loading_frame && game.state != GS_TITLE && game.state != GS_ENDING;
+        if (loading_frame) loading_frame--;
+        if (measure && lines > g_debug.max_lines) {
+            g_debug.max_lines = lines;
+            g_debug.max_state = game.state | (game.state_t << 8);
+        }
         vsync();
+        if (measure && vblank_count - last_vb > 1) {
+            g_debug.lag_frames++;
+            g_debug.lag_state = game.state | (game.state_t << 8);
+        }
+        last_vb = vblank_count;
         oam_end();
         sprite_flush_dynamic();
         fx_flash_apply();
@@ -355,6 +378,7 @@ int main(void) {
             player.b.vy = 0;
             camera_snap(g_debug.cmd_arg, 80);
             level_force_redraw();
+            loading_frame = 2;
             g_debug.cmd = 0;
         }
         game.state_t++;

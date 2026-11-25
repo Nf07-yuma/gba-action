@@ -52,6 +52,8 @@ typedef struct {
     uint32_t lift_count;
     int32_t lifts[8];
     uint32_t obj_tiles;
+    uint32_t lag_frames, max_lines;
+    uint32_t max_state, lag_state;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -631,6 +633,10 @@ int main(int argc, char** argv) {
     }
 
     print_debug("final");
+    read_debug(&d);
+    printf("  処理負荷: 最大 %u / 228 走査線 (state=%u t=%u), 処理落ち %u フレーム (最後: state=%u t=%u)\n", d.max_lines,
+           d.max_state & 0xFF, d.max_state >> 8, d.lag_frames, d.lag_state & 0xFF, d.lag_state >> 8);
+    check(d.lag_frames == 0, "処理落ち (1 フレームに収まらない) が発生していない");
     printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
     core->deinit(core);
     return failures ? 1 : 0;
