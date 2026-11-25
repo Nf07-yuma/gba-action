@@ -699,10 +699,21 @@ int main(int argc, char** argv) {
             }
             printf("  SRAM: magic=%08X hiscore=%u\n", magic, hs);
             check(magic == 0x31435453u && hs == d.score, "ハイスコアが SRAM に保存される");
+            uint32_t reached = core->busRead8(core, 0x0E00000D);
+            printf("  SRAM: 到達ステージ=%u\n", reached + 1);
+            check(reached == 4, "到達ステージ (ステージセレクト用) が SRAM に保存される");
             /* リセット後のタイトルに記録が表示される */
             core->reset(core);
             run(120, 0);
             screenshot("boss_06_title_hiscore");
+            /* ステージセレクト: 上で 5 → 4 ... 上キーで STAGE 2 を選んで開始 */
+            run(2, KUP);
+            run(4, 0);
+            run(2, KSTART);
+            run(30, 0);
+            wait_state(GS_PLAY, 400);
+            read_debug(&d);
+            check(d.stage == 1, "タイトルのステージセレクトで STAGE 2 から開始できる");
         }
         screenshot("boss_04_end");
     } else {

@@ -171,8 +171,19 @@ static void title_update(void) {
         game.easy ^= 1;
         sfx_play(SFX_SELECT);
     }
+    /* ステージセレクト (到達済みステージまで, 上下で選択) */
+    if (save_reached > 0 && key_hit(KEY_UP | KEY_DOWN)) {
+        int n = save_reached + 1;
+        title_cursor = (title_cursor + (key_hit(KEY_UP) ? 1 : n - 1)) % n;
+        sfx_play(SFX_SELECT);
+    }
     if (t > 1) {
-        text_put_center(11, game.easy ? "<  EASY   >" : "<  NORMAL >", game.easy ? BGPAL_HUD_C : BGPAL_HUD);
+        text_put_center(10, game.easy ? "<  EASY   >" : "<  NORMAL >", game.easy ? BGPAL_HUD_C : BGPAL_HUD);
+        if (save_reached > 0) {
+            char buf[16] = "STAGE 1  ^v";
+            buf[6] = (char)('1' + title_cursor);
+            text_put_center(11, buf, title_cursor ? BGPAL_HUD_Y : BGPAL_HUD);
+        }
         text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
     }
     oam_begin();
@@ -180,7 +191,7 @@ static void title_update(void) {
     oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 180, 74, 1, OBJPAL_GHOST, 0);
     if (key_hit(KEY_START | KEY_A)) {
         sfx_play(SFX_SELECT);
-        game.stage = 0;
+        game.stage = (u8)title_cursor;
         game.lives = START_LIVES;
         game.score = 0;
         game.kills = 0;
@@ -226,6 +237,7 @@ static void intro_update(void) {
     if (game.state_t == 1) {
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
         stage_begin(0);
+        save_reach_stage(game.stage);
         {
             static const u8 stage_song[] = {SONG_STAGE, SONG_STAGE2, SONG_STAGE, SONG_STAGE2, SONG_FINAL};
             music_play(stage_song[game.stage < 5 ? game.stage : 0]);

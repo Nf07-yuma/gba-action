@@ -221,6 +221,8 @@ void hud_draw(int force);
 extern u32 save_hiscore;
 extern u16 save_best_chain;
 extern u8 save_cleared;
+extern u8 save_reached;
+void save_reach_stage(int stage);
 void save_load(void);
 int save_record(u32 score, u16 chain, int cleared);
 
