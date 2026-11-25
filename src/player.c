@@ -8,7 +8,7 @@ Player player;
 #define GRAV_HOLD 0x38
 #define GRAV      0x70
 #define MAX_FALL  0x500
-#define JUMP_V    0x4C0
+#define JUMP_V    0x520
 #define RUN_MAX   0x1A0
 #define ACC_GROUND 0x38
 #define ACC_AIR   0x28

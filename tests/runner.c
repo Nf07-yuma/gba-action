@@ -41,6 +41,9 @@ typedef struct {
     uint32_t magic, frame, state, stage;
     int32_t px, py, hp, lives;
     uint32_t score, kills, deaths, chain_best, enemies, cam_x, clears;
+    uint32_t level_cells, level_w, level_h;
+    int32_t vy;
+    uint32_t on_ground;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -196,22 +199,56 @@ static void print_debug(const char* label) {
            d.kills, d.deaths, d.chain_best, d.clears);
 }
 
-/* 簡易ボット: 右へ進みつつ斬り、詰まったらジャンプ/ダッシュ */
+/* ステージ情報を読むボット: 穴・トゲ・壁の手前でジャンプし、斬りながら右へ進む */
+static int cell_at(const DebugInfo* d, int cx, int cy) {
+    if (!d->level_cells || cx < 0 || cx >= (int)d->level_w) return 1;
+    if (cy < 0 || cy >= (int)d->level_h) return 0;
+    return core->busRead8(core, d->level_cells + cy * d->level_w + cx) & 0x0F;
+}
+#define C_SOLID 1
+#define C_ONEWAY 2
+#define C_HAZARD 3
+
+static int bot_jump_hold;
 static void bot_step(int t, DebugInfo* prev, int* stuck) {
     DebugInfo d;
     read_debug(&d);
     uint32_t keys = 0;
-    if (d.state == GS_PLAY || d.state == GS_DEAD) {
+    if (d.state == GS_PLAY) {
         keys |= KRIGHT;
-        if (t % 8 < 2) keys |= KB;
         if (d.px == prev->px) (*stuck)++;
         else *stuck = 0;
-        if (*stuck > 6 || t % 47 < 12) keys |= KA;
-        if (*stuck > 30 && t % 60 == 0) keys |= KR;
-        if ((t / 300) % 4 == 3 && t % 300 < 30) keys = KLEFT | (t % 8 < 2 ? KB : 0); /* たまに振り返る */
+        int feet = d.py + 23;
+        int cx = (d.px + 5) >> 4;
+        int cy = feet >> 4;
+        int want_jump = 0;
+        int gap_near = 0;
+        for (int a = 1; a <= 4; a++) {
+            int below = cell_at(&d, cx + a, cy + 1);
+            if (below != C_SOLID && below != C_ONEWAY) gap_near = 1;
+        }
+        /* 穴の近くでは攻撃しない (攻撃で足が止まるため) */
+        if (!gap_near && t % 10 < 2) keys |= KB;
+        if (d.on_ground) {
+            /* 足元の 1 セル先が穴/トゲ, 前方が壁なら跳ぶ */
+            int x_front = d.px + 10 + 4;
+            int below = cell_at(&d, x_front >> 4, cy + 1);
+            if (below != C_SOLID && below != C_ONEWAY) want_jump = 1;
+            if (below == C_HAZARD) want_jump = 1;
+            int front = (d.px + 10 + 6) >> 4;
+            if (cell_at(&d, front, cy) == C_SOLID || cell_at(&d, front, cy - 1) == C_SOLID) want_jump = 1;
+            if (*stuck > 4) want_jump = 1;
+        }
+        if (want_jump && bot_jump_hold == 0) bot_jump_hold = 22;
+        if (bot_jump_hold > 0) {
+            bot_jump_hold--;
+            if (bot_jump_hold < 21) keys |= KA; /* 1 フレーム離してから押す */
+        }
+        if (*stuck > 40 && t % 30 == 0) keys |= KR;
     } else if (d.state == GS_TITLE || d.state == GS_CLEAR || d.state == GS_GAMEOVER || d.state == GS_STAGE_INTRO) {
         if (t % 20 == 0) keys |= KSTART;
     }
+    if (d.state == GS_DEAD && prev->state != GS_DEAD) printf("  [death] frame=%u pos=(%d,%d) cell=(%d,%d) hp=%d\n", d.frame, prev->px, prev->py, (prev->px + 5) >> 4, (prev->py + 23) >> 4, prev->hp);
     *prev = d;
     run(1, keys);
 }
@@ -341,6 +378,8 @@ int main(int argc, char** argv) {
         }
         print_debug("bot end");
         printf("  到達ステージ: %u\n", max_stage + 1);
+        read_debug(&d);
+        check(d.clears >= 1, "ボットがステージ 1 をクリアできる (難易度/地形の回帰検知)");
     }
 
     print_debug("final");

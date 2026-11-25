@@ -70,6 +70,7 @@ tests/runner.c  ヘッドレステストランナー (libmgba)
 - `assets/sprites.txt` … 敵・アイテムのドット絵（1 文字 = 1 ピクセル、文字とパレットの対応はファイル先頭）
 - `tools/compose_player.py` … 主人公のポーズ（関節座標）を編集して `make sprites` で再合成
 - `assets/music/*.txt` … BGM の楽譜（`C-5` 音符、`---` 伸ばす、`...` 消音、ドラムは `K`=キック `S`=スネア `H`=ハット）
+- `tools/build_levels.py` … ステージ 2 以降を区画の組み合わせで生成（`python3 tools/build_levels.py`）
 - `assets/levels/*.txt` … ステージ（`#`=壁 `=`=足場 `^`=トゲ `P`=開始位置 `c/d/t/j/s`=敵 `C`=中間地点 `G`=ゴール `+`=回復）
 
 ## CI / CD

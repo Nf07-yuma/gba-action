@@ -43,10 +43,10 @@ void hud_draw(int force) {
     if (hud_last_chain != ch) {
         hud_last_chain = ch;
         if (ch) {
-            text_num(14, 0, ch, 3, BGPAL_HUD_Y);
-            text_put(17, 0, " CHAIN", BGPAL_HUD_Y);
+            text_num(21, 1, ch, 3, BGPAL_HUD_Y);
+            text_put(24, 1, " CHAIN", BGPAL_HUD_Y);
         } else {
-            text_put(14, 0, "         ", BGPAL_HUD);
+            text_put(21, 1, "         ", BGPAL_HUD);
         }
     }
 }
@@ -296,7 +296,7 @@ static void ending_update(void) {
     }
     REG_BGHOFS(BG_SKY) = (u16)(t >> 2);
     oam_begin();
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 104, 112 - 72, 0, OBJPAL_NORMAL, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 8, 76, 0, OBJPAL_NORMAL, 0);
     if (t > 120 && key_hit(KEY_START)) title_enter();
 }
 
@@ -344,5 +344,10 @@ int main(void) {
         g_debug.chain_best = game.chain_best;
         g_debug.enemies = (u32)enemies_alive();
         g_debug.cam_x = (u32)cam_x;
+        g_debug.level_cells = level.def ? (u32)level.def->cells : 0;
+        g_debug.level_w = (u32)level.w;
+        g_debug.level_h = (u32)level.h;
+        g_debug.vy = player.b.vy;
+        g_debug.on_ground = player.b.on_ground;
     }
 }

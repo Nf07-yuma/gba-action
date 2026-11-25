@@ -135,7 +135,7 @@ void body_move(Body* b) {
         int oldbot = FROM_FP(b->y) + b->h - 1;
         int nb = FROM_FP(ny) + b->h - 1;
         int cy = nb >> 4;
-        int land = row_any(cy, l >> 4, r >> 4, CELL_SOLID);
+        int land = row_any(cy, l >> 4, r >> 4, CELL_SOLID) || row_any(cy, l >> 4, r >> 4, CELL_HAZARD);
         if (!land && b->oneway && !b->drop && (oldbot >> 4) < cy && row_any(cy, l >> 4, r >> 4, CELL_ONEWAY))
             land = 1;
         if (land) {
@@ -160,12 +160,10 @@ void body_move(Body* b) {
 }
 
 int body_touch_hazard(const Body* b) {
-    /* トゲは各セルの下半分のみ判定 */
+    /* トゲは床として乗れるが、乗る(足元が接する)とダメージ */
     int l = FROM_FP(b->x) + 2, r = FROM_FP(b->x) + b->w - 3;
-    int bot = FROM_FP(b->y) + b->h - 1;
-    int cy = bot >> 4;
-    if ((bot & 15) < 8) return 0;
-    return row_any(cy, l >> 4, r >> 4, CELL_HAZARD);
+    int bot = FROM_FP(b->y) + b->h;
+    return row_any(bot >> 4, l >> 4, r >> 4, CELL_HAZARD) || row_any((bot - 1) >> 4, l >> 4, r >> 4, CELL_HAZARD);
 }
 
 /* ---- カメラ ---- */
