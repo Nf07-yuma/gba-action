@@ -13,6 +13,7 @@ typedef struct {
     s32 ax, ay;    /* 出現位置 (ピクセル) */
     s16 ldx, ldy;  /* 足場の今フレームの移動量 */
     u8 phase;      /* 足場の位相 (0-63) */
+    u8 last_wave;  /* 最後に当たった斬撃波 */
     s16 obj;       /* レベルオブジェクト番号 (-1 = ドロップ品) */
 } Ent;
 
@@ -163,11 +164,11 @@ static void enemy_die(Ent* e) {
     ent_free(e, 1);
 }
 
-static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop) {
+static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop, int pierce) {
     int from_left = player_cx() < px_center(e);
     int dir = from_left ? 1 : -1;
     /* シールド兵: 正面からの通常攻撃は弾く (フィニッシュ/空中/背面は通る) */
-    if (e->type == OBJ_SHIELD && player.combo < 2 && e->dir == -dir && player.combo != 3) {
+    if (!pierce && e->type == OBJ_SHIELD && player.combo < 2 && e->dir == -dir && player.combo != 3) {
         fx_spawn(FX_SPARK, px_center(e) - 4 - dir * 6, py_center(e) - 4, 0);
         sfx_play(SFX_CHECK);
         player.b.vx = -dir * 0x200;
@@ -475,9 +476,20 @@ void enemies_update(void) {
         int bx = FROM_FP(e->b.x), by = FROM_FP(e->b.y);
         if (atk && e->last_hit != player.attack_id && overlap(ax0, ay0, ax1, ay1, bx, by, bx + e->b.w, by + e->b.h)) {
             e->last_hit = player.attack_id;
-            enemy_hit(e, dmg, kbx, kby, stop);
+            enemy_hit(e, dmg, kbx, kby, stop, 0);
             if (!e->active) continue;
         }
+        /* チャージ斬りの斬撃波 (盾を貫通) */
+        for (int k = 0; k < MAX_PWAVE && e->active; k++) {
+            int wx0, wy0, wx1, wy1;
+            u8 wid;
+            if (player_wave_box(k, &wx0, &wy0, &wx1, &wy1, &wid) && e->last_wave != wid &&
+                overlap(wx0, wy0, wx1, wy1, bx, by, bx + e->b.w, by + e->b.h)) {
+                e->last_wave = wid;
+                enemy_hit(e, 3, 0x300, -0x200, 4, 1);
+            }
+        }
+        if (!e->active) continue;
         /* 接触ダメージ (怯み中は無害)。機雷は触れると即爆発 */
         if (e->type == OBJ_MINE && body_overlap(&e->b, &player.b)) {
             player_damage(2, px_center(e));
@@ -580,6 +592,22 @@ void bullets_update(void) {
             if (b->life) fx_spawn(FX_SPARK, x - 4, y - 4, 0);
             b->active = 0;
             continue;
+        }
+        /* 斬撃波でも弾を消せる */
+        {
+            int hitw = 0;
+            for (int k = 0; k < MAX_PWAVE; k++) {
+                int wx0, wy0, wx1, wy1;
+                u8 wid;
+                if (b->kind == 0 && player_wave_box(k, &wx0, &wy0, &wx1, &wy1, &wid) &&
+                    overlap(wx0, wy0, wx1, wy1, x - 3, y - 3, x + 3, y + 3))
+                    hitw = 1;
+            }
+            if (hitw) {
+                fx_spawn(FX_SPARK, x - 4, y - 4, 0);
+                b->active = 0;
+                continue;
+            }
         }
         /* 斬撃で弾を消せる (衝撃波は不可) */
         if (b->kind == 0 && atk && overlap(ax0, ay0, ax1, ay1, x - 3, y - 3, x + 3, y + 3)) {

@@ -123,13 +123,30 @@ static void shoot_at_player(int spread) {
     sfx_play(SFX_SHOT);
 }
 
+static u8 boss_last_wave;
+static void boss_apply_hit(int ax0, int ay0, int ax1, int ay1, int dmg, int stop);
+
 static void boss_hit_check(void) {
     int ax0, ay0, ax1, ay1, dmg, kbx, kby, stop;
+    int x0 = FROM_FP(boss.b.x), y0 = FROM_FP(boss.b.y);
+    for (int k = 0; k < MAX_PWAVE && boss.state != BS_DEAD; k++) {
+        u8 wid;
+        if (player_wave_box(k, &ax0, &ay0, &ax1, &ay1, &wid) && wid != boss_last_wave &&
+            ax0 < x0 + BW && x0 < ax1 && ay0 < y0 + BH && y0 < ay1) {
+            boss_last_wave = wid;
+            boss_apply_hit(ax0, ay0, ax1, ay1, 3, 4);
+        }
+    }
+    if (boss.state == BS_DEAD) return;
     if (!player_attack_box(&ax0, &ay0, &ax1, &ay1, &dmg, &kbx, &kby, &stop)) return;
     if (boss.last_hit == player.attack_id) return;
-    int x0 = FROM_FP(boss.b.x), y0 = FROM_FP(boss.b.y);
     if (!(ax0 < x0 + BW && x0 < ax1 && ay0 < y0 + BH && y0 < ay1)) return;
     boss.last_hit = player.attack_id;
+    boss_apply_hit(ax0, ay0, ax1, ay1, dmg, stop);
+}
+
+static void boss_apply_hit(int ax0, int ay0, int ax1, int ay1, int dmg, int stop) {
+    int x0 = FROM_FP(boss.b.x), y0 = FROM_FP(boss.b.y);
     if (boss.state == BS_STUN) dmg += 1;  /* 気絶中は追加ダメージ */
     boss.hp -= dmg;
     boss.flash = 8;

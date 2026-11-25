@@ -72,13 +72,30 @@ static void set_state(int s) {
     core.t = 0;
 }
 
+static u8 core_last_wave;
+static void apply_hit(int ax0, int ay0, int ax1, int ay1, int dmg, int stop);
+
 static void hit_check(void) {
     int ax0, ay0, ax1, ay1, dmg, kbx, kby, stop;
+    int x0 = core.x - CW / 2, y0 = core.y - CH / 2;
+    for (int k = 0; k < MAX_PWAVE && core.state != CS_DEAD; k++) {
+        u8 wid;
+        if (player_wave_box(k, &ax0, &ay0, &ax1, &ay1, &wid) && wid != core_last_wave &&
+            ax0 < x0 + CW && x0 < ax1 && ay0 < y0 + CH && y0 < ay1) {
+            core_last_wave = wid;
+            apply_hit(ax0, ay0, ax1, ay1, 3, 4);
+        }
+    }
+    if (core.state == CS_DEAD) return;
     if (!player_attack_box(&ax0, &ay0, &ax1, &ay1, &dmg, &kbx, &kby, &stop)) return;
     if (core.last_hit == player.attack_id) return;
-    int x0 = core.x - CW / 2, y0 = core.y - CH / 2;
     if (!(ax0 < x0 + CW && x0 < ax1 && ay0 < y0 + CH && y0 < ay1)) return;
     core.last_hit = player.attack_id;
+    apply_hit(ax0, ay0, ax1, ay1, dmg, stop);
+}
+
+static void apply_hit(int ax0, int ay0, int ax1, int ay1, int dmg, int stop) {
+    int x0 = core.x - CW / 2, y0 = core.y - CH / 2;
     int hx = (MAX(ax0, x0) + MIN(ax1, x0 + CW)) / 2;
     int hy = (MAX(ay0, y0) + MIN(ay1, y0 + CH)) / 2;
     if (core.state != CS_OPEN) {

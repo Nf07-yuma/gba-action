@@ -110,6 +110,7 @@ static void stage_begin(int respawn) {
     bullets_clear();
     fx_clear();
     boss_reset();
+    player_waves_clear();
     player_init(game.checkpoint_x - 5, game.checkpoint_y - 24);
     game.chain = 0;
     game.chain_t = 0;
@@ -428,6 +429,13 @@ int main(void) {
         g_debug.vy = player.b.vy;
         g_debug.on_ground = player.b.on_ground;
         g_debug.boss_hp = boss_hp();
+        {
+            int n = 0, a, b, c, d2;
+            u8 id;
+            for (int k = 0; k < MAX_PWAVE; k++) n += player_wave_box(k, &a, &b, &c, &d2, &id);
+            g_debug.pwaves = (u32)n;
+            g_debug.charge = player.charge;
+        }
         g_debug.boss_state = (u32)boss_state_id();
         g_debug.boss_x = boss_x();
         {
