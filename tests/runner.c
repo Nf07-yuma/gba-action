@@ -472,6 +472,11 @@ int main(int argc, char** argv) {
     if (strcmp(scenario, "smoke") == 0) run(600, 0);
     check(audio_end("bgm_title") > 200.0, "タイトルで BGM が鳴っている");
 
+    if (strstr(scenario, "easy")) {
+        /* EASY を選択 */
+        run(2, KRIGHT);
+        run(4, 0);
+    }
     run(2, KSTART);
     run(40, 0);
     read_debug(&d);
@@ -612,6 +617,21 @@ int main(int argc, char** argv) {
             char msg[96];
             snprintf(msg, sizeof(msg), "曲 %s が鳴る", names[i]);
             check(rms > 200.0, msg);
+        }
+        /* 新しい効果音 (SFX_CHARGE〜SFX_GUARD = 11〜15) */
+        static const char* sfx[] = {"charge", "wave", "laser", "alarm", "guard"};
+        for (int i = 0; i < 5; i++) {
+            run(30, 0);
+            audio_begin();
+            core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 11 + i);
+            core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 4);
+            run(40, 0);
+            char nm[64];
+            snprintf(nm, sizeof(nm), "sfx_%s", sfx[i]);
+            double rms = audio_end(nm);
+            char msg[96];
+            snprintf(msg, sizeof(msg), "効果音 %s が鳴る", sfx[i]);
+            check(rms > 100.0, msg);
         }
     } else if (strncmp(scenario, "stage", 5) == 0) {
         /* 指定ステージ (1 始まり) からボットでプレイ */

@@ -486,6 +486,10 @@ int main(void) {
             if (game.lives <= 0) game.lives = START_LIVES;
             set_state(GS_STAGE_INTRO);
             g_debug.cmd = 0;
+        } else if (g_debug.cmd == 4) {
+            music_stop();
+            sfx_play((int)g_debug.cmd_arg);
+            g_debug.cmd = 0;
         } else if (g_debug.cmd == 3) {
             music_play((int)g_debug.cmd_arg);
             g_debug.cmd = 0;

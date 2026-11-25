@@ -171,7 +171,7 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop, int pierce) {
     /* シールド兵: 正面からの通常攻撃は弾く (フィニッシュ/空中/背面は通る) */
     if (!pierce && e->type == OBJ_SHIELD && player.combo < 2 && e->dir == -dir && player.combo != 3) {
         fx_spawn(FX_SPARK, px_center(e) - 4 - dir * 6, py_center(e) - 4, 0);
-        sfx_play(SFX_CHECK);
+        sfx_play(SFX_GUARD);
         player.b.vx = -dir * 0x200;
         game.hitstop = 2;
         return;
@@ -218,10 +218,12 @@ static void update_mine(Ent* e) {
         if (ABS(dx) + ABS(dy) < 56) {
             e->state = 1;
             e->cool = 50;
-            sfx_play(SFX_SHOT);
+            sfx_play(SFX_ALARM);
         }
     } else if (--e->cool == 0) {
         mine_explode(e);
+    } else if (e->cool % 12 == 0) {
+        sfx_play(SFX_ALARM);
     }
 }
 
@@ -241,9 +243,9 @@ static int laser_len(const Ent* e) {
 
 static void update_laser(Ent* e) {
     u16 c = e->t % LASER_CYCLE;
-    if (c == LASER_WARN) sfx_play(SFX_SHOT);
+    if (c == LASER_WARN) sfx_play(SFX_ALARM);
     if (c == LASER_FIRE) {
-        sfx_play(SFX_SLASH3);
+        sfx_play(SFX_LASER);
         shake_t = 4;
         shake_amp = 1;
     }

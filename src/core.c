@@ -101,7 +101,7 @@ static void apply_hit(int ax0, int ay0, int ax1, int ay1, int dmg, int stop) {
     if (core.state != CS_OPEN) {
         /* 装甲に弾かれる */
         fx_spawn(FX_SPARK, hx - 4, hy - 4, 0);
-        sfx_play(SFX_CHECK);
+        sfx_play(SFX_GUARD);
         game.hitstop = 2;
         return;
     }

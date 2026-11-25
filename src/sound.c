@@ -48,6 +48,11 @@ void sfx_play(int id) {
     case SFX_SHOT:   sq1(0x001E, 0x6180, 1750); break;
     case SFX_SELECT: sq1(0x0000, 0xA180, 1950); break;
     case SFX_CHECK:  sq1(0x0014, 0xC280, 1880); break;
+    case SFX_CHARGE: sq1(0x0017, 0xB180, 1700); break;                       /* 溜め完了: 上昇音 */
+    case SFX_WAVE:   noise(0xD300, 0x0013); sq1(0x002D, 0xD280, 1650); noise_busy = 14; break; /* 斬撃波 */
+    case SFX_LASER:  noise(0xA400, 0x0005); sq1(0x0000, 0xC3C0, 1250); noise_busy = 20; break; /* レーザー照射 */
+    case SFX_ALARM:  sq1(0x0000, 0x7140, 2010); break;                       /* 警告ピッ */
+    case SFX_GUARD:  noise(0x9100, 0x0001); sq1(0x0000, 0x9140, 1990); noise_busy = 6; break; /* 金属で弾かれる */
     }
 }
 
