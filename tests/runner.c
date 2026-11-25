@@ -60,6 +60,7 @@ typedef struct {
     uint32_t rank, rank_hist;
     uint32_t ambient;
     uint32_t best_time;
+    uint32_t combo;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -566,6 +567,16 @@ int main(int argc, char** argv) {
         run(10, KRIGHT);
         read_debug(&d);
         check(d.px > bx + 30, "R でダッシュする");
+        /* ダッシュ中に B でダッシュ斬り */
+        run(30, 0);
+        run(2, KR | KRIGHT);
+        run(3, KRIGHT);
+        run(2, KB | KRIGHT);
+        read_debug(&d);
+        check(d.combo == 0x104, "ダッシュ中に B でダッシュ斬りが出る");
+        /* ダッシュの無敵時間中は点滅するので、表示されるフレームまで進めて撮影 */
+        run(3, KRIGHT);
+        screenshot("04a_dashslash");
         /* チャージ斬り: B 長押し → 離すと斬撃波 */
         run(20, 0);
         run(50, KB);
