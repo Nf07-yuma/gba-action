@@ -24,10 +24,13 @@ static s16 hud_last = -1;
 #define BH 44
 #define BOSS_HP 40
 
-int boss_active(void) { return boss.state != BS_NONE; }
-int boss_hp(void) { return boss.state == BS_NONE ? 0 : boss.hp; }
+static u8 kind; /* 0=GUARDIAN, 1=OVERLORD CORE */
+int boss_active(void) { return kind ? core_active() : boss.state != BS_NONE; }
+int boss_hp(void) { return kind ? core_hp() : (boss.state == BS_NONE ? 0 : boss.hp); }
 
 void boss_reset(void) {
+    kind = 0;
+    core_reset();
     memset(&boss, 0, sizeof(boss));
     boss_lock_x = -1;
     hud_last = -1;
@@ -36,15 +39,24 @@ void boss_reset(void) {
 static int bcx(void) { return FROM_FP(boss.b.x) + BW / 2; }
 static int bcy(void) { return FROM_FP(boss.b.y) + BH / 2; }
 static int pcx(void) { return FROM_FP(player.b.x) + player.b.w / 2; }
-int boss_state_id(void) { return boss.state; }
-int boss_x(void) { return bcx(); }
+int boss_state_id(void) { return kind ? 10 + core_state_id() : boss.state; }
+int boss_x(void) { return kind ? core_x() : bcx(); }
 
 /* ステージ末尾に到達したらボス戦を開始 */
-int boss_check_start(int spawn_cx, int spawn_cy) {
-    if (boss.state != BS_NONE) return 0;
+int boss_check_start(int spawn_cx, int spawn_cy, int param) {
+    if (boss.state != BS_NONE || core_active()) return 0;
     s32 lock = level.px_w - SCREEN_W;
     if (cam_x < lock - 4 || pcx() < lock + 24) return 0;
     memset(&boss, 0, sizeof(boss));
+    if (param == 1) {
+        kind = 1;
+        boss_lock_x = lock;
+        hud_last = -1;
+        core_start(spawn_cx, spawn_cy);
+        music_play(SONG_BOSS);
+        return 1;
+    }
+    kind = 0;
     boss.state = BS_INTRO;
     boss.hp = boss.hp_max = BOSS_HP;
     boss.dir = -1;
@@ -149,6 +161,10 @@ static void boss_hit_check(void) {
 }
 
 void boss_update(void) {
+    if (kind) {
+        core_update();
+        return;
+    }
     if (boss.state == BS_NONE) return;
     boss.t++;
     if (boss.flash) boss.flash--;
@@ -299,6 +315,10 @@ void boss_update(void) {
 }
 
 void boss_draw(void) {
+    if (kind) {
+        core_draw();
+        return;
+    }
     if (boss.state == BS_NONE) return;
     if (boss.state == BS_DEAD && (boss.t & 2)) return;
     int spr = SPR_BOSS_IDLE0 + ((boss.t >> 4) & 1);
@@ -320,6 +340,7 @@ void boss_draw(void) {
                          : (boss.phase ? OBJPAL_ALT : OBJPAL_NORMAL);
     int sx = bcx() - 32 - cam_x + (boss.dir > 0 ? 2 : -2);
     int sy = FROM_FP(boss.b.y) + BH - 63 - cam_y;
+    sprite_request_dynamic(spr);
     oam_put(spr, sx, sy, boss.dir > 0, pal, 2);
 }
 
@@ -327,14 +348,19 @@ void boss_draw(void) {
 void boss_hud(void) {
     s16 hp = boss.state == BS_NONE || boss.state == BS_DEAD ? -1 : boss.hp;
     if (boss.state == BS_INTRO) hp = boss.hp_max;
+    s16 hpmax = boss.hp_max;
+    if (kind) {
+        hp = core_active() && !core_dead() ? (s16)core_hp() : -1;
+        hpmax = (s16)core_hp_max();
+    }
     if (hp == hud_last) return;
     u16* m = SCREENBLOCK(SBB_HUD);
     if (hp < 0) {
         for (int x = 0; x < 30; x++) m[19 * 32 + x] = 0;
     } else {
-        text_put(1, 19, "GUARDIAN", BGPAL_HUD_Y);
+        text_put(1, 19, kind ? "OVERLORD" : "GUARDIAN", BGPAL_HUD_Y);
         int cells = 18;
-        int fill = (hp * cells + boss.hp_max - 1) / boss.hp_max;
+        int fill = (hp * cells + hpmax - 1) / hpmax;
         for (int i = 0; i < cells; i++)
             m[19 * 32 + 10 + i] = (u16)((i < fill ? HUD_TILE_BOSS_FULL : HUD_TILE_BOSS_EMPTY) | (BGPAL_HUD << 12));
     }

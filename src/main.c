@@ -326,6 +326,7 @@ int main(void) {
     for (;;) {
         vsync();
         oam_end();
+        sprite_flush_dynamic();
         fx_flash_apply();
         hud_draw(0);
         if (game.state == GS_PLAY || game.state == GS_DEAD || game.state == GS_PAUSE) boss_hud();

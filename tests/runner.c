@@ -51,6 +51,7 @@ typedef struct {
     uint32_t cmd, cmd_arg;
     uint32_t lift_count;
     int32_t lifts[8];
+    uint32_t obj_tiles;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -367,7 +368,14 @@ static void bot_step(int t, DebugInfo* prev, int* stuck) {
             /* 足元の 1 セル先が穴/トゲ, 前方が壁なら跳ぶ */
             int x_front = d.px + 10 + 4;
             int below = cell_at(&d, x_front >> 4, cy + 1);
-            if (below != C_SOLID && below != C_ONEWAY) {
+            /* 段差 (下に床がある) か本当の穴かを区別 */
+            int drop_ok = 0;
+            for (int k = 1; k <= 5; k++) {
+                int c2 = cell_at(&d, x_front >> 4, cy + k);
+                if (is_floor(c2)) { drop_ok = 1; break; }
+                if (c2 == C_HAZARD) break;
+            }
+            if (below != C_SOLID && below != C_ONEWAY && !drop_ok) {
                 int la = lift_ahead(&d, feet);
                 if (la == 0) want_jump = 1;
                 else if (la == 3) { /* 同じ高さで隣接: そのまま歩いて乗る */
@@ -443,6 +451,8 @@ int main(int argc, char** argv) {
     check(d.magic == 0x48435453u, "デバッグブロック(magic)が存在する");
     check(d.state == GS_TITLE, "起動後タイトル画面にいる");
     check(d.frame >= 80, "フレームカウンタが進んでいる (ゲームループ稼働)");
+    printf("  OBJ タイル使用量: %u / 1024\n", d.obj_tiles);
+    check(d.obj_tiles > 0 && d.obj_tiles <= 1024, "スプライト VRAM (1024 タイル) に収まっている");
     screenshot("01_title");
     if (strcmp(scenario, "smoke") == 0) run(600, 0);
     check(audio_end("bgm_title") > 200.0, "タイトルで BGM が鳴っている");
@@ -528,16 +538,17 @@ int main(int argc, char** argv) {
         read_debug(&d);
         print_debug("stage end");
         check(d.clears > clears0 || d.state == GS_ENDING, "ボットがこのステージをクリアできる");
-    } else if (strcmp(scenario, "boss") == 0) {
-        /* ステージ3末尾のボス戦へ直行し、ボスの出現・攻撃・被弾を検証 */
-        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 2);
+    } else if (strncmp(scenario, "boss", 4) == 0) {
+        /* ボス戦へ直行し、ボスの出現・攻撃・被弾を検証 (boss=ステージ3, boss5=ステージ5) */
+        int bst = scenario[4] ? atoi(scenario + 4) - 1 : 2;
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), bst);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
         run(130, 0);
         read_debug(&d);
-        check(d.state == GS_PLAY && d.stage == 2, "ステージ3へ移動できる");
+        check(d.state == GS_PLAY && (int)d.stage == bst, "ボスのステージへ移動できる");
         int arena_x = d.level_w * 16 - 240;
         /* ボス直前のチェックポイントの少し手前へワープして歩いて入場 */
-        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), arena_x - 13 * 16);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), arena_x - 18 * 16);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
         for (int i = 0; i < 400; i++) {
             read_debug(&d);

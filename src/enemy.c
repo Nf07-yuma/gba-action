@@ -112,7 +112,7 @@ void enemies_spawn_check(void) {
         if (obj_flag[i] & (OF_SPAWNED | OF_DEAD)) continue;
         if (o->type != OBJ_LIFT_H && o->type != OBJ_LIFT_V && (o->x < el || o->x > er)) continue;
         if (o->type == OBJ_BOSS) {
-            if (boss_check_start(o->x, o->y)) obj_flag[i] |= OF_SPAWNED;
+            if (boss_check_start(o->x, o->y, o->param)) obj_flag[i] |= OF_SPAWNED;
             continue;
         }
         Ent* e = ent_alloc();
