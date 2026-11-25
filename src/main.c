@@ -133,6 +133,7 @@ static void draw_world(void) {
 
 /* --------------------------------------------------------------- 各画面 */
 static void title_enter(void) {
+    game.demo = 0;
     set_state(GS_TITLE);
     dma3_copy32(PAL_BG, &theme_pals[0], 16);
     dma3_copy32(PAL_BG + BGPAL_MID * 16, &theme_mid_pals[0], 8);
@@ -144,8 +145,46 @@ static void title_enter(void) {
     music_play(SONG_TITLE);
 }
 
+/* ---- デモプレイ (アトラクトモード) ---- */
+#define DEMO_IDLE 1200  /* タイトルで 20 秒放置で開始 */
+#define DEMO_LEN  1500  /* 25 秒で終了 */
+static u16 demo_jump;
+static u16 demo_prev_ai;
+
+/* デモ用の簡易 AI: 右へ走って斬り、穴や壁の手前で跳ぶ */
+static u16 demo_keys(void) {
+    u16 k = KEY_RIGHT;
+    if ((game.frame % 14) < 2) k |= KEY_B;
+    int feet = FROM_FP(player.b.y) + player.b.h;
+    int fx = FROM_FP(player.b.x) + player.b.w + 4;
+    if (player.b.on_ground && !demo_jump) {
+        int below = level_cell(fx >> 4, (feet + 2) >> 4);
+        int wall = level_solid((fx + 2) >> 4, (feet - 4) >> 4) || level_solid((fx + 2) >> 4, (feet - 20) >> 4);
+        if ((below != CELL_SOLID && below != CELL_ONEWAY) || wall) demo_jump = 22;
+    }
+    if (demo_jump) {
+        demo_jump--;
+        if (demo_jump < 21) k |= KEY_A;
+    }
+    return k;
+}
+
+static void demo_start(void) {
+    game.demo = 1;
+    game.stage = 0;
+    game.lives = 1;
+    game.score = 0;
+    game.easy = 0;
+    demo_jump = 0;
+    set_state(GS_STAGE_INTRO);
+}
+
 static void title_update(void) {
     u32 t = game.state_t;
+    if (t > DEMO_IDLE) {
+        demo_start();
+        return;
+    }
     REG_BGHOFS(BG_SKY) = (u16)(t >> 2);
     REG_BGVOFS(BG_SKY) = 96;
     REG_BGHOFS(BG_MID) = (u16)(t >> 1);
@@ -189,7 +228,7 @@ static void title_update(void) {
     oam_begin();
     oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 28, 74, 0, OBJPAL_NORMAL, 0);
     oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 180, 74, 1, OBJPAL_GHOST, 0);
-    if (key_hit(KEY_START | KEY_A)) {
+    if (t > 20 && key_hit(KEY_START | KEY_A)) {
         sfx_play(SFX_SELECT);
         game.stage = (u8)title_cursor;
         game.lives = START_LIVES;
@@ -237,7 +276,7 @@ static void intro_update(void) {
     if (game.state_t == 1) {
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
         stage_begin(0);
-        save_reach_stage(game.stage);
+        if (!game.demo) save_reach_stage(game.stage);
         {
             static const u8 stage_song[] = {SONG_STAGE, SONG_STAGE2, SONG_STAGE, SONG_STAGE2, SONG_FINAL};
             music_play(stage_song[game.stage < 5 ? game.stage : 0]);
@@ -479,6 +518,26 @@ int main(void) {
         if (game.state == GS_PLAY || game.state == GS_DEAD || game.state == GS_PAUSE) boss_hud();
         sound_update();
         input_update();
+        if (game.demo) {
+            /* 実際のボタンが押されたらデモを終えてタイトルへ。それ以外は AI の入力に置き換え */
+            static u16 demo_prev;
+            u16 real = key_cur;
+            if (real & ~demo_prev & KEY_MASK) {
+                key_cur = key_prev = 0;
+                title_enter();
+            } else if (game.state == GS_PLAY && game.state_t > DEMO_LEN) {
+                title_enter();
+            } else if ((game.state == GS_DEAD && game.state_t > 60) || game.state == GS_GAMEOVER || game.state == GS_CLEAR) {
+                title_enter();
+            } else {
+                key_prev = demo_prev_ai;
+                key_cur = demo_keys();
+                demo_prev_ai = key_cur;
+            }
+            demo_prev = real;
+            if (game.demo && (game.frame & 32)) text_put_center(2, "DEMO PLAY", BGPAL_HUD_Y);
+            else if (game.demo) text_put_center(2, "         ", BGPAL_HUD);
+        }
         game.frame++;
         /* テスト用命令 */
         if (g_debug.cmd == 1 && game.state != GS_STAGE_INTRO) {
