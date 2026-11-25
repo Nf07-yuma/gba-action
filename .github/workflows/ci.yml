@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: ビルド & ヘッドレステスト
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ツールチェーンのインストール
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libmgba-dev zlib1g-dev
+
+      - name: ROM ビルド
+        run: make -j"$(nproc)"
+
+      - name: ROM サイズ確認
+        run: ls -l steel_chain.gba
+
+      - name: スモークテスト (mGBA コアで自動操作)
+        run: make test
+
+      - name: ボット通しプレイ (到達度レポート)
+        run: build/runner steel_chain.gba build/bot-out bot | tee build/bot-report.txt
+
+      - name: 成果物アップロード
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: steel-chain-${{ github.sha }}
+          path: |
+            steel_chain.gba
+            build/test-out/*.png
+            build/bot-out/*.png
+            build/bot-report.txt
+          if-no-files-found: warn
+
+  release:
+    name: ROM を Release に公開
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: steel-chain-${{ github.sha }}
+          path: dist
+      - name: Release 作成
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${{ github.run_number }}"
+          MSG="$(git log -1 --pretty=%s)"
+          cp dist/steel_chain.gba "dist/steel_chain-${TAG}.gba"
+          gh release create "$TAG" "dist/steel_chain-${TAG}.gba" \
+            --target "${{ github.sha }}" \
+            --title "STEEL CHAIN ${TAG}" \
+            --notes "自動ビルド (main: ${{ github.sha }})
+
+          最新の変更: ${MSG}
+
+          ダウンロードした .gba を mGBA などの GBA エミュレータで開いて遊べます。"
