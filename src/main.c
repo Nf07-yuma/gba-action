@@ -281,6 +281,9 @@ static void play_update(void) {
         return;
     }
     world_step();
+    /* HP が残りわずか: 一定間隔で控えめな警告音 (HUD のゲージも赤くなる) */
+    if (player.hp > 0 && player.hp <= 2 && player.state != PS_DEAD && !game.demo && game.stage_time % 80 == 0)
+        sfx_play(SFX_LOWHP);
     draw_world();
 }
 
