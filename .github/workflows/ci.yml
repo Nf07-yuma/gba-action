@@ -57,6 +57,9 @@ jobs:
           build/runner steel_chain.gba build/boss-out boss
           build/runner steel_chain.gba build/boss5-out boss5
 
+      - name: デモプレイ (タイトル放置) テスト
+        run: build/runner steel_chain.gba build/attract-out attract
+
       - name: 全曲の録音 (試聴用 WAV)
         run: build/runner steel_chain.gba build/music-out music
 

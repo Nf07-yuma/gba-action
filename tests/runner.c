@@ -472,6 +472,24 @@ int main(int argc, char** argv) {
     if (strcmp(scenario, "smoke") == 0) run(600, 0);
     check(audio_end("bgm_title") > 200.0, "タイトルで BGM が鳴っている");
 
+    if (strcmp(scenario, "attract") == 0) {
+        /* タイトル放置でデモプレイが始まり、ボタンでタイトルに戻る */
+        run(1300, 0);
+        wait_state(GS_PLAY, 400);
+        read_debug(&d);
+        check(d.state == GS_PLAY, "タイトルで放置するとデモプレイが始まる");
+        int x0 = d.px;
+        run(300, 0);
+        read_debug(&d);
+        screenshot("attract_demo");
+        check(d.px > x0 + 100, "デモプレイでキャラクターが自動で進む");
+        run(2, KA);
+        run(5, 0);
+        read_debug(&d);
+        check(d.state == GS_TITLE, "ボタンを押すとデモが終わりタイトルに戻る");
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
     if (strstr(scenario, "easy")) {
         /* EASY を選択 */
         run(2, KRIGHT);
