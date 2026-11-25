@@ -13,6 +13,8 @@
 | ![タイトル](docs/images/title.png) | ![ステージ2 スカイウェイ](docs/images/stage2.png) |
 | ![ボス GUARDIAN](docs/images/boss1.png) | ![ステージ4 データハイウェイ](docs/images/stage4.png) |
 | ![最終ボス OVERLORD CORE](docs/images/lastboss.png) | ![エンディング](docs/images/ending.png) |
+| ![CHAIN ポップアップ](docs/images/chain_popup.png) | ![ボス撃破のスローモーション](docs/images/boss_finish.png) |
+| ![難易度 HARD](docs/images/title_hard.png) | ![スタッフロール](docs/images/staffroll.png) |
 
 （画像はすべて CI と同じヘッドレスランナーで実機ROMを動かして撮影したもの。`build/runner steel_chain.gba <出力先> demo1_0` で連番フレームを書き出せます）
 
@@ -32,7 +34,7 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 | B 長押し→離す | チャージ斬り（飛ぶ斬撃波。盾を貫通し、敵弾も消す） |
 | R / L | ダッシュ（無敵時間あり、空中でも 1 回） |
 | START | 開始 / ポーズ |
-| 十字キー左右（タイトル） | 難易度 NORMAL / EASY の切り替え |
+| 十字キー左右（タイトル） | 難易度 EASY / NORMAL / HARD の切り替え |
 | 十字キー上下（タイトル） | 開始ステージの選択（一度到達したステージから） |
 
 ### ゲームの特徴
@@ -44,6 +46,11 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 - **全5ステージ**: 工場 → スカイウェイ → 鋳造所(ボス) → データハイウェイ → 中枢コア(最終ボス)
 - **ボス戦**: 工場の守護ロボ GUARDIAN。突進を壁に誘導すると気絶して大チャンス
 - **最終ボス**: OVERLORD CORE。装甲が開いて目が露出したときだけ攻撃が通る
+- **CHAIN の節目演出**: 10 / 25 / 50 / 100 CHAIN でポップアップとボーナス
+- **ボス撃破演出**: とどめの一撃でヒットストップ → スローモーションで爆発
+- **難易度 3 段階**: EASY（HP12・残機5）/ NORMAL（HP8）/ HARD（HP6・敵弾が速い・回復が出にくい）
+- **デモプレイ**: タイトルで約 20 秒放置すると自動プレイのデモが流れる
+- **エンディング**: リザルト → 専用曲のスタッフロール（キャスト紹介）→ THE END
 
 ## ビルド方法
 
@@ -63,7 +70,10 @@ sudo apt-get install libmgba-dev zlib1g-dev
 make test                                        # スモークテスト (build/test-out/*.png)
 build/runner steel_chain.gba build/bot-out bot   # ボットによる通しプレイ
 build/runner steel_chain.gba build/boss-out boss # ボス戦へ直行してボット戦術で撃破を検証 (boss5 で最終ボス)
-build/runner steel_chain.gba build/st4 stage4    # 指定ステージからボットでプレイ
+build/runner steel_chain.gba build/st4 stage4    # 指定ステージからボットでプレイ (TRACE=<x> で x 付近の挙動をログ出力)
+build/runner steel_chain.gba build/m music       # 全 BGM・効果音を WAV に録音
+build/runner steel_chain.gba build/a attract     # タイトル放置→デモプレイ
+build/runner steel_chain.gba build/e boteasy     # EASY でボット通しプレイ (bothard で HARD)
 ```
 
 ROM は EWRAM 先頭 (`0x02000000`) にデバッグ情報ブロック（状態・座標・HP・スコア等）を置いており、
@@ -74,12 +84,17 @@ ROM は EWRAM 先頭 (`0x02000000`) にデバッグ情報ブロック（状態�
 ```
 src/            ゲーム本体 (C)
   crt0.s        起動コード・ROM ヘッダ・割り込み
-  main.c        メインループ・画面遷移・HUD
+  main.c        メインループ・画面遷移・HUD・CHAIN 演出
+  title.c       タイトル画面・難易度/ステージ選択・デモプレイ
+  ending.c      エンディング・スタッフロール
   player.c      主人公 (移動/ジャンプ/ダッシュ/コンボ)
-  enemy.c       敵・チェックポイント・ゴール・弾
+  enemy.c       敵・チェックポイント・ゴール・弾・動く足場
+  boss.c        ボス GUARDIAN
+  core.c        最終ボス OVERLORD CORE
   level.c       ステージ・当たり判定・スクロール・カメラ
   fx.c          エフェクト
-  sound.c       効果音 (PSG)
+  sound.c       効果音・BGM シーケンサ (PSG)
+  save.c        SRAM セーブ (ハイスコア・到達ステージ)
 include/gba.h   GBA ハードウェア定義
 assets/         スプライト (ASCII アート) / ステージ定義 (テキスト)
 tools/          アセット生成 (Python)
