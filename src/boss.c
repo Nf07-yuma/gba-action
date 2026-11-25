@@ -28,8 +28,12 @@ static u8 kind; /* 0=GUARDIAN, 1=OVERLORD CORE */
 int boss_active(void) { return kind ? core_active() : boss.state != BS_NONE; }
 int boss_hp(void) { return kind ? core_hp() : (boss.state == BS_NONE ? 0 : boss.hp); }
 
+#define WARN_LEN 130
+static u16 warn_t; /* ボス登場の警告表示の残りフレーム */
+
 void boss_reset(void) {
     kind = 0;
+    warn_t = 0;
     core_reset();
     memset(&boss, 0, sizeof(boss));
     boss_lock_x = -1;
@@ -54,6 +58,7 @@ int boss_check_start(int spawn_cx, int spawn_cy, int param) {
         hud_last = -1;
         core_start(spawn_cx, spawn_cy);
         music_play(SONG_LASTBOSS);
+        warn_t = WARN_LEN;
         return 1;
     }
     kind = 0;
@@ -69,7 +74,7 @@ int boss_check_start(int spawn_cx, int spawn_cy, int param) {
     boss.b.y = TO_FP(top * CELL - BH / 2);
     boss_lock_x = lock;
     music_play(SONG_BOSS);
-    text_put_center(8, "! WARNING !", BGPAL_HUD_Y);
+    warn_t = WARN_LEN;
     (void)spawn_cy;
     return 1;
 }
@@ -212,7 +217,6 @@ void boss_update(void) {
             }
         }
         if (boss.t > 110) {
-            text_put(0, 8, "                              ", BGPAL_HUD);
             boss.next = 0;
             boss.state = BS_IDLE;
             boss.t = 0;
@@ -366,6 +370,19 @@ void boss_draw(void) {
 
 /* 画面下部のボス HP ゲージ */
 void boss_hud(void) {
+    /* 登場時の警告: 点滅する WARNING とボス名、警告音 3 回 */
+    if (warn_t && game.state == GS_PLAY) {
+        warn_t--;
+        u32 e = WARN_LEN - warn_t;
+        if (e % 24 == 1 && e < 72) sfx_play(SFX_ALARM);
+        if (warn_t == 0 || (e < 72 && (e & 8))) {
+            text_put(0, 7, "                              ", BGPAL_HUD);
+            text_put(0, 9, "                              ", BGPAL_HUD);
+        } else {
+            text_put_center(7, kind ? "! FINAL WARNING !" : "!  WARNING  !", BGPAL_HUD_Y);
+            if (e > 30) text_put_center(9, kind ? "OVERLORD CORE" : "HEAVY GUARD UNIT GUARDIAN", BGPAL_HUD_C);
+        }
+    }
     s16 hp = boss.state == BS_NONE || boss.state == BS_DEAD ? -1 : boss.hp;
     if (boss.state == BS_INTRO) hp = boss.hp_max;
     s16 hpmax = boss.hp_max;

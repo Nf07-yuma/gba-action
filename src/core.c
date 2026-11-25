@@ -161,14 +161,12 @@ void core_update(void) {
     switch (core.state) {
     case CS_INTRO:
         if (core.y < core.top_y) core.y += 1;
-        if (core.t == 1) text_put_center(8, "! FINAL WARNING !", BGPAL_HUD_Y);
         if (core.t == 60) {
             shake_t = 20;
             shake_amp = 3;
             sfx_play(SFX_BOOM);
         }
         if (core.t > 140) {
-            text_put(0, 8, "                              ", BGPAL_HUD);
             set_state(CS_CLOSED);
         }
         return;
