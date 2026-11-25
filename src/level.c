@@ -81,6 +81,9 @@ void level_scroll_update(void) {
         sx += (rng_range(shake_amp * 2 + 1) - shake_amp);
         sy += (rng_range(shake_amp * 2 + 1) - shake_amp);
     }
+    /* 揺れでステージの外 (マップの折り返し部分) が見えないように */
+    sx = CLAMP(sx, 0, MAX(0, level.px_w - SCREEN_W));
+    sy = CLAMP(sy, 0, MAX(0, level.px_h - SCREEN_H));
     REG_BGHOFS(BG_LEVEL) = (u16)sx;
     REG_BGVOFS(BG_LEVEL) = (u16)sy;
     /* 遠景は 1/4 速度で横スクロール, 縦は少しだけ */
