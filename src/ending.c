@@ -74,7 +74,7 @@ void ending_update(void) {
         REG_BGVOFS(BG_HUD) = 0;
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
         text_clear();
-        music_play(SONG_TITLE);
+        music_play(SONG_ENDING);
         text_put_center(3, "MISSION COMPLETE", BGPAL_HUD_Y);
         if (save_record(game.score, game.chain_best, 1)) text_put_center(17, "NEW RECORD!", BGPAL_HUD_Y);
         text_put_center(6, "THE CORE IS SILENT.", BGPAL_HUD);

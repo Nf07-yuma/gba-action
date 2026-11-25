@@ -634,8 +634,8 @@ int main(int argc, char** argv) {
         }
     } else if (strcmp(scenario, "music") == 0) {
         /* 全曲を録音して WAV に保存 (試聴用) */
-        static const char* names[] = {"title", "stage", "boss", "stage2", "final", "lastboss", "clear", "gameover"};
-        for (int i = 0; i < 8; i++) {
+        static const char* names[] = {"title", "stage", "boss", "stage2", "final", "lastboss", "clear", "gameover", "ending"};
+        for (int i = 0; i < 9; i++) {
             core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), i);
             core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 3);
             run(2, 0);
