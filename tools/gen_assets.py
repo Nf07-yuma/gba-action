@@ -533,6 +533,85 @@ def gen_skyline():
 
 
 # ---------------------------------------------------------------------------
+# 中景 (工場のシルエット, 256x256 のうち下部のみ。色 0 は透明)
+# ---------------------------------------------------------------------------
+def gen_midground():
+    W, H = 256, 256
+    rng = random.Random(77)
+    p = blank(W, H, 0)
+    base = 232  # シルエットの接地ライン
+
+    def put(x, y, c):
+        if 0 <= y < H:
+            p[y][x % W] = c
+
+    def fill(x0, y0, x1, y1, c):
+        for y in range(max(0, y0), min(H, y1 + 1)):
+            for x in range(x0, x1 + 1):
+                p[y][x % W] = c
+
+    # 横に走る太いパイプ
+    fill(0, base - 30, W - 1, base - 26, 2)
+    fill(0, base - 29, W - 1, base - 29, 3)
+    x = 0
+    while x < W - 8:
+        kind = rng.choice(["tank", "stack", "crane", "block", "tank"])
+        if kind == "tank":
+            w = rng.randint(28, 40)
+            h = rng.randint(40, 60)
+            top = base - h
+            fill(x, top + 6, x + w, base, 1)
+            for i in range(6):  # 丸い天井
+                inset = (6 - i) * w // 18
+                fill(x + inset, top + i, x + w - inset, top + i, 1)
+            fill(x, top + 6, x, base, 2)
+            for yy in range(top + 14, base, 10):
+                fill(x + 2, yy, x + w - 2, yy, 2)
+            put(x + w // 2, top + 2, 4)
+            x += w + rng.randint(4, 10)
+        elif kind == "stack":
+            w = rng.randint(8, 12)
+            h = rng.randint(80, 110)
+            fill(x, base - h, x + w, base, 1)
+            fill(x - 1, base - h, x + w + 1, base - h + 3, 2)
+            for yy in range(base - h + 12, base, 18):
+                fill(x, yy, x + w, yy + 1, 2)
+            put(x + w // 2, base - h - 1, 4)
+            x += w + rng.randint(10, 18)
+        elif kind == "crane":
+            h = rng.randint(90, 120)
+            mx = x + 6
+            fill(mx, base - h, mx + 3, base, 1)
+            for yy in range(base - h, base, 6):  # 格子
+                put(mx + 1, yy, 2)
+            arm = rng.randint(40, 60)
+            fill(mx - 12, base - h, mx + arm, base - h + 2, 1)
+            for i in range(0, arm, 4):
+                put(mx + i, base - h + 1, 2)
+            fill(mx + arm - 2, base - h + 3, mx + arm - 2, base - h + 30, 2)
+            fill(mx + arm - 5, base - h + 30, mx + arm + 1, base - h + 33, 1)
+            put(mx + 1, base - h - 1, 4)
+            x += arm + rng.randint(6, 12)
+        else:
+            w = rng.randint(30, 50)
+            h = rng.randint(24, 40)
+            fill(x, base - h, x + w, base, 1)
+            for wy in range(base - h + 5, base - 4, 7):
+                for wx in range(x + 4, x + w - 4, 6):
+                    if rng.random() < 0.35:
+                        fill(wx, wy, wx + 2, wy + 1, 3)
+            x += w + rng.randint(2, 8)
+    fill(0, base, W - 1, H - 1, 1)
+    return p
+
+
+def mid_palette(sky):
+    """遠景パレットから中景の色を作る (空より暗く、窓は暖色)"""
+    d = lambda c, k: tuple(max(0, int(v * k)) for v in c)
+    return [(0, 0, 0), d(sky[6], 0.55), d(sky[12], 0.9), d(sky[13], 0.9), (26, 6, 8)] + [(0, 0, 0)] * 11
+
+
+# ---------------------------------------------------------------------------
 # フォント 5x7 (8x8 タイルに輪郭付きで描画)
 # ---------------------------------------------------------------------------
 FONT_SRC = {
@@ -890,6 +969,12 @@ def main():
     tv = []
     for lv, sky in THEMES:
         tv += [rgb15(c) for c in lv] + [rgb15(c) for c in sky]
+    mv = []
+    for lv, sky in THEMES:
+        mv += [rgb15(c) for c in mid_palette(sky)]
+    H.append(f"extern const u16 theme_mid_pals[{len(THEMES)} * 16];")
+    C.append(f"const u16 theme_mid_pals[{len(THEMES)} * 16] = {{\n{c_u16(mv)}\n}};")
+    H.append("#define BGPAL_MID 6")
     H.append(f"#define THEME_COUNT {len(THEMES)}")
     H.append(f"extern const u16 theme_pals[THEME_COUNT * 32];")
     C.append(f"const u16 theme_pals[THEME_COUNT * 32] = {{\n{c_u16(tv)}\n}};")
@@ -983,6 +1068,16 @@ def main():
     sky_map = tileize(sky_pix, 256, 256, sky_tiles, sky_index, base=0, pal=1)
     if len(sky_tiles) > 512:
         sys.exit(f"遠景タイル数超過: {len(sky_tiles)}")
+    # 中景は CBB3 の前半 (192 タイルまで, SBB27 と重ならない範囲)
+    mid_tiles, mid_index = [bytes(32)], {bytes(32): 0}
+    mid_map = tileize(gen_midground(), 256, 256, mid_tiles, mid_index, base=0, pal=6)
+    if len(mid_tiles) > 192:
+        sys.exit(f"中景タイル数超過: {len(mid_tiles)}")
+    H.append(f"extern const u32 mid_tiles[{len(mid_tiles) * 8}];")
+    C.append(f"const u32 mid_tiles[{len(mid_tiles) * 8}] = {{\n{c_bytes_as_u32(b''.join(mid_tiles))}\n}};")
+    H.append("extern const u16 mid_map[32 * 32];")
+    C.append(f"const u16 mid_map[32 * 32] = {{\n{c_u16(mid_map)}\n}};")
+    print(f"mid_tiles={len(mid_tiles)}")
     H.append(f"extern const u32 sky_tiles[{len(sky_tiles) * 8}];")
     C.append(f"const u32 sky_tiles[{len(sky_tiles) * 8}] = {{\n{c_bytes_as_u32(b''.join(sky_tiles))}\n}};")
     H.append(f"#define FONT_TILE_BASE {font_base}")

@@ -135,7 +135,8 @@ static void draw_world(void) {
 static void title_enter(void) {
     set_state(GS_TITLE);
     dma3_copy32(PAL_BG, &theme_pals[0], 16);
-    REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_OBJ;
+    dma3_copy32(PAL_BG + BGPAL_MID * 16, &theme_mid_pals[0], 8);
+    REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
     text_clear();
     cam_x = 0;
     cam_y = 0;
@@ -145,8 +146,10 @@ static void title_enter(void) {
 
 static void title_update(void) {
     u32 t = game.state_t;
-    REG_BGHOFS(BG_SKY) = (u16)(t >> 1);
+    REG_BGHOFS(BG_SKY) = (u16)(t >> 2);
     REG_BGVOFS(BG_SKY) = 96;
+    REG_BGHOFS(BG_MID) = (u16)(t >> 1);
+    REG_BGVOFS(BG_MID) = 96;
     if (t == 1) {
         text_clear();
         u16* m = SCREENBLOCK(SBB_HUD);
@@ -221,7 +224,7 @@ static void intro_message(u32 t) {
 
 static void intro_update(void) {
     if (game.state_t == 1) {
-        REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_OBJ;
+        REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
         stage_begin(0);
         {
             static const u8 stage_song[] = {SONG_STAGE, SONG_STAGE2, SONG_STAGE, SONG_STAGE2, SONG_FINAL};
@@ -398,7 +401,7 @@ static void gameover_update(void) {
 static void ending_update(void) {
     u32 t = game.state_t;
     if (t == 1) {
-        REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_OBJ;
+        REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
         text_clear();
         music_play(SONG_TITLE);
         text_put_center(3, "MISSION COMPLETE", BGPAL_HUD_Y);

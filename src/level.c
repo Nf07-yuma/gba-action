@@ -86,6 +86,9 @@ void level_scroll_update(void) {
     /* 遠景は 1/4 速度で横スクロール, 縦は少しだけ */
     REG_BGHOFS(BG_SKY) = (u16)(cam_x >> 2);
     REG_BGVOFS(BG_SKY) = (u16)(96 + (cam_y >> 3));
+    /* 中景は 1/2 速度 (地平線が画面下寄りに来るよう縦位置を合わせる) */
+    REG_BGHOFS(BG_MID) = (u16)(cam_x >> 1);
+    REG_BGVOFS(BG_MID) = (u16)(84 + (cam_y >> 2));
 }
 
 void level_force_redraw(void) {
@@ -106,6 +109,7 @@ void level_load(int index) {
     /* ステージの配色テーマ (BG パレット 0=ステージ, 1=遠景) */
     int th = level.def->theme < THEME_COUNT ? level.def->theme : 0;
     dma3_copy32(PAL_BG, &theme_pals[th * 32], 16);
+    dma3_copy32(PAL_BG + BGPAL_MID * 16, &theme_mid_pals[th * 16], 8);
 }
 
 /* ---- 当たり判定 ---- */
