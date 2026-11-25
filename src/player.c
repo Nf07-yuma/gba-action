@@ -276,12 +276,13 @@ void player_update(void) {
     /* チャージ: B を押し続けると溜まり、離すと斬撃波を放つ */
     if (key_down(KEY_B) && p->state != PS_HURT) {
         if (p->charge < 255) p->charge++;
-        if (p->charge == CHARGE_FULL) sfx_play(SFX_CHECK);
+        if (p->charge == CHARGE_FULL) sfx_play(SFX_CHARGE);
     } else if (key_released(KEY_B)) {
         if (p->charge >= CHARGE_FULL && p->state != PS_HURT) {
             if (p->state != PS_ATTACK || p->atk_t > 4) {
                 start_attack(2);
                 pwave_fire();
+                sfx_play(SFX_WAVE);
                 shake_t = 4;
                 shake_amp = 1;
             }

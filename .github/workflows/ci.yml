@@ -67,6 +67,10 @@ jobs:
             build/runner steel_chain.gba build/stage$s-out stage$s | grep -E "stage end|death|このステージ" | tee -a build/stage-report.txt
           done
 
+      - name: ボット通しプレイ EASY (到達度レポート)
+        continue-on-error: true
+        run: build/runner steel_chain.gba build/boteasy-out boteasy | grep -E "到達|bot end|death|ending" | tee build/boteasy-report.txt
+
       - name: ボット通しプレイ (到達度レポート)
         run: build/runner steel_chain.gba build/bot-out bot | tee build/bot-report.txt
 
@@ -85,6 +89,7 @@ jobs:
             build/boss5-out/*.png
             build/bot-report.txt
             build/stage-report.txt
+            build/boteasy-report.txt
           if-no-files-found: warn
 
   release:
