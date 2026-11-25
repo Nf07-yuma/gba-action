@@ -477,7 +477,9 @@ int main(int argc, char** argv) {
     check(audio_end("bgm_title") > 200.0, "タイトルで BGM が鳴っている");
 
     if (strcmp(scenario, "attract") == 0) {
-        /* タイトル放置でデモプレイが始まり、ボタンでタイトルに戻る */
+        /* タイトル放置でデモプレイが始まり、ボタンでタイトルに戻る (EASY を選んでおく) */
+        run(2, KLEFT);
+        run(4, 0);
         run(1300, 0);
         wait_state(GS_PLAY, 400);
         read_debug(&d);
@@ -491,6 +493,20 @@ int main(int argc, char** argv) {
         run(5, 0);
         read_debug(&d);
         check(d.state == GS_TITLE, "ボタンを押すとデモが終わりタイトルに戻る");
+        /* 2 回目のデモはステージ2 */
+        run(1300, 0);
+        wait_state(GS_PLAY, 400);
+        read_debug(&d);
+        check(d.state == GS_PLAY && d.stage == 1, "2 回目のデモはステージ2 で流れる");
+        screenshot("attract_demo2");
+        run(2, KA);
+        run(30, 0);
+        /* デモ前に選んだ難易度 (EASY) が保たれている */
+        run(2, KSTART);
+        run(40, 0);
+        wait_state(GS_PLAY, 400);
+        read_debug(&d);
+        check(d.hp == 12, "デモの後も選んでいた難易度 (EASY) が保たれる");
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }
