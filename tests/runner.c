@@ -666,8 +666,8 @@ int main(int argc, char** argv) {
             check(rms > 200.0, msg);
         }
         /* 新しい効果音 (SFX_CHARGE〜SFX_GUARD = 11〜15) */
-        static const char* sfx[] = {"charge", "wave", "laser", "alarm", "guard"};
-        for (int i = 0; i < 5; i++) {
+        static const char* sfx[] = {"charge", "wave", "laser", "alarm", "guard", "lowhp"};
+        for (int i = 0; i < 6; i++) {
             run(30, 0);
             audio_begin();
             core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 11 + i);
