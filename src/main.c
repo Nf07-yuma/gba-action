@@ -148,12 +148,19 @@ static void title_update(void) {
         for (int y = 0; y < 6; y++)
             for (int x = 0; x < 30; x++) m[(y + 1) * 32 + x] = logo_map[y * 30 + x];
         text_put_center(8, "- ROBOT BLADE ACTION -", BGPAL_HUD_C);
+        if (save_hiscore) {
+            text_put(1, 15, "HI", BGPAL_HUD_C);
+            text_num(4, 15, save_hiscore, 7, BGPAL_HUD);
+            text_put(13, 15, "CHAIN", BGPAL_HUD_C);
+            text_num(19, 15, save_best_chain, 3, BGPAL_HUD);
+            if (save_cleared) text_put(23, 15, "* CLEAR", BGPAL_HUD_Y);
+        }
         text_put_center(17, "B:SLASH  A:JUMP  R:DASH", BGPAL_HUD_C);
         text_put_center(19, "(C) 2026 STEEL CHAIN PROJECT", BGPAL_HUD);
     }
-    if (t > 1) text_put_center(14, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
+    if (t > 1) text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
     oam_begin();
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 104, 76, 0, OBJPAL_NORMAL, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 104, 70, 0, OBJPAL_NORMAL, 0);
     if (key_hit(KEY_START | KEY_A)) {
         sfx_play(SFX_SELECT);
         game.stage = 0;
@@ -275,6 +282,7 @@ static void gameover_update(void) {
         music_stop();
         text_clear();
         text_put_center(7, "GAME OVER", BGPAL_HUD);
+        if (save_record(game.score, game.chain_best, 0)) text_put_center(9, "NEW RECORD!", BGPAL_HUD_Y);
         text_put_center(11, "START: CONTINUE", BGPAL_HUD_C);
         text_put_center(13, "SELECT: TITLE", BGPAL_HUD_C);
     }
@@ -295,6 +303,7 @@ static void ending_update(void) {
         text_clear();
         music_play(SONG_TITLE);
         text_put_center(3, "MISSION COMPLETE", BGPAL_HUD_Y);
+        if (save_record(game.score, game.chain_best, 1)) text_put_center(16, "NEW RECORD!", BGPAL_HUD_Y);
         text_put_center(6, "THE CORE IS SILENT.", BGPAL_HUD);
         text_put_center(7, "STEEL RETURNS HOME.", BGPAL_HUD);
         text_put(6, 10, "SCORE", BGPAL_HUD_C);
@@ -315,6 +324,7 @@ static void ending_update(void) {
 int main(void) {
     REG_WAITCNT = 0x4317;
     video_init();
+    save_load();
     sound_init();
     REG_DISPSTAT |= 0x0008;
     REG_IE = IRQ_VBLANK;

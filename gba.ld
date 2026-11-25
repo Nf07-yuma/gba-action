@@ -17,6 +17,7 @@ SECTIONS {
     } > rom
 
     .rodata : ALIGN(4) {
+        KEEP(*(.rodata.save_type_id))
         *(.rodata .rodata.*)
         . = ALIGN(4);
     } > rom
