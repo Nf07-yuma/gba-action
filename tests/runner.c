@@ -193,6 +193,18 @@ static void screenshot(const char* name) {
     printf("  [shot] %s\n", path);
 }
 
+static void run(int n, uint32_t keys);
+static void read_debug(DebugInfo* d);
+/* 指定状態になるまで最大 max フレーム進める */
+static void wait_state(uint32_t st, int max) {
+    DebugInfo d;
+    for (int i = 0; i < max; i++) {
+        read_debug(&d);
+        if (d.state == st) return;
+        run(1, 0);
+    }
+}
+
 static void check(int cond, const char* msg) {
     if (cond) {
         printf("  [ ok ] %s\n", msg);
@@ -465,7 +477,9 @@ int main(int argc, char** argv) {
     read_debug(&d);
     check(d.state == GS_STAGE_INTRO, "START でステージ紹介へ遷移");
     screenshot("02_intro");
-    run(100, 0);
+    run(110, 0);
+    screenshot("02b_intro_msg");
+    wait_state(GS_PLAY, 400);
     read_debug(&d);
     check(d.state == GS_PLAY, "ステージ開始 (PLAY)");
     int start_x = d.px;
@@ -546,7 +560,8 @@ int main(int argc, char** argv) {
         int x = us ? atoi(us + 1) : 0;
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), st);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
-        run(130, 0);
+        run(30, 0);
+        wait_state(GS_PLAY, 400);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), x);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
         run(50, 0);
@@ -576,7 +591,8 @@ int main(int argc, char** argv) {
         int st = atoi(scenario + 5) - 1;
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), st);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
-        run(130, 0);
+        run(30, 0);
+        wait_state(GS_PLAY, 400);
         DebugInfo prev = d;
         int stuck = 0;
         uint32_t clears0 = d.clears;
@@ -599,7 +615,8 @@ int main(int argc, char** argv) {
         int bst = scenario[4] ? atoi(scenario + 4) - 1 : 2;
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), bst);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
-        run(130, 0);
+        run(30, 0);
+        wait_state(GS_PLAY, 400);
         read_debug(&d);
         check(d.state == GS_PLAY && (int)d.stage == bst, "ボスのステージへ移動できる");
         int arena_x = d.level_w * 16 - 240;
