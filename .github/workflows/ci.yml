@@ -14,10 +14,12 @@ jobs:
   build-test:
     name: ビルド & ヘッドレステスト
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
       - name: ツールチェーンのインストール
+        timeout-minutes: 8
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libmgba-dev zlib1g-dev
