@@ -13,6 +13,8 @@
 #include <mgba/core/core.h>
 #include <mgba/core/log.h>
 #include <mgba/core/config.h>
+#include <mgba/core/blip_buf.h>
+#include <math.h>
 #include <zlib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,12 +65,74 @@ static void read_debug(DebugInfo* d) {
     for (size_t i = 0; i < sizeof(DebugInfo) / 4; i++) p[i] = core->busRead32(core, 0x02000000 + i * 4);
 }
 
+/* ---- 音声キャプチャ ---- */
+#define AUDIO_RATE 32768
+static short* audio_buf;
+static size_t audio_len, audio_cap;
+static int audio_capturing;
+
+static void audio_drain(void) {
+    blip_t* l = core->getAudioChannel(core, 0);
+    blip_t* r = core->getAudioChannel(core, 1);
+    short tmp[2048], tmpr[2048];
+    int n;
+    while ((n = blip_samples_avail(l)) > 0) {
+        if (n > 2048) n = 2048;
+        blip_read_samples(l, tmp, n, 0);
+        blip_read_samples(r, tmpr, n, 0);
+        if (!audio_capturing) continue;
+        if (audio_len + n > audio_cap) {
+            audio_cap = (audio_len + n) * 2;
+            audio_buf = realloc(audio_buf, audio_cap * sizeof(short));
+        }
+        for (int i = 0; i < n; i++) audio_buf[audio_len++] = (short)((tmp[i] + tmpr[i]) / 2);
+    }
+}
+
 static void run(int n, uint32_t keys) {
     core->setKeys(core, keys);
     for (int i = 0; i < n; i++) {
         core->runFrame(core);
+        audio_drain();
         frames_run++;
     }
+}
+
+static void audio_begin(void) {
+    audio_len = 0;
+    audio_capturing = 1;
+}
+
+/* WAV を保存し RMS を返す */
+static double audio_end(const char* name) {
+    audio_capturing = 0;
+    char path[512];
+    snprintf(path, sizeof(path), "%s/%s.wav", outdir, name);
+    FILE* f = fopen(path, "wb");
+    uint32_t bytes = (uint32_t)(audio_len * 2);
+    uint32_t hdr32;
+    uint16_t hdr16;
+    fwrite("RIFF", 1, 4, f);
+    hdr32 = 36 + bytes; fwrite(&hdr32, 4, 1, f);
+    fwrite("WAVEfmt ", 1, 8, f);
+    hdr32 = 16; fwrite(&hdr32, 4, 1, f);
+    hdr16 = 1; fwrite(&hdr16, 2, 1, f);
+    hdr16 = 1; fwrite(&hdr16, 2, 1, f);
+    hdr32 = AUDIO_RATE; fwrite(&hdr32, 4, 1, f);
+    hdr32 = AUDIO_RATE * 2; fwrite(&hdr32, 4, 1, f);
+    hdr16 = 2; fwrite(&hdr16, 2, 1, f);
+    hdr16 = 16; fwrite(&hdr16, 2, 1, f);
+    fwrite("data", 1, 4, f);
+    fwrite(&bytes, 4, 1, f);
+    fwrite(audio_buf, 2, audio_len, f);
+    fclose(f);
+    double sum = 0, mean = 0;
+    for (size_t i = 0; i < audio_len; i++) mean += audio_buf[i];
+    mean /= audio_len ? audio_len : 1;
+    for (size_t i = 0; i < audio_len; i++) sum += (audio_buf[i] - mean) * (audio_buf[i] - mean);
+    double rms = audio_len ? sqrt(sum / audio_len) : 0;
+    printf("  [wave] %s (%.1fs, rms=%.0f)\n", path, audio_len / (double)AUDIO_RATE, rms);
+    return rms;
 }
 
 static void png_chunk(FILE* f, const char* type, const unsigned char* data, uint32_t len) {
@@ -169,7 +233,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     mCoreInitConfig(core, NULL);
-    struct mCoreOptions opts = {.useBios = false, .skipBios = true};
+    struct mCoreOptions opts = {.useBios = false, .skipBios = true, .volume = 0x100};
     mCoreConfigLoadDefaults(&core->config, &opts);
     core->desiredVideoDimensions(core, &W, &H);
     fb = calloc(W * H, sizeof(color_t));
@@ -179,18 +243,24 @@ int main(int argc, char** argv) {
         return 2;
     }
     mCoreLoadConfig(core);
+    core->setAudioBufferSize(core, 4096);
+    blip_set_rates(core->getAudioChannel(core, 0), core->frequency(core), AUDIO_RATE);
+    blip_set_rates(core->getAudioChannel(core, 1), core->frequency(core), AUDIO_RATE);
     core->reset(core);
 
     DebugInfo d;
     printf("== scenario: %s ==\n", scenario);
 
-    /* 共通: タイトル */
+    /* 共通: タイトル (BGM を録音) */
+    audio_begin();
     run(90, 0);
     read_debug(&d);
     check(d.magic == 0x48435453u, "デバッグブロック(magic)が存在する");
     check(d.state == GS_TITLE, "起動後タイトル画面にいる");
     check(d.frame >= 80, "フレームカウンタが進んでいる (ゲームループ稼働)");
     screenshot("01_title");
+    if (strcmp(scenario, "smoke") == 0) run(600, 0);
+    check(audio_end("bgm_title") > 200.0, "タイトルで BGM が鳴っている");
 
     run(2, KSTART);
     run(40, 0);
@@ -204,6 +274,7 @@ int main(int argc, char** argv) {
     print_debug("start");
 
     if (strcmp(scenario, "smoke") == 0) {
+        audio_begin();
         /* 右へ走る */
         run(50, KRIGHT);
         read_debug(&d);
@@ -229,6 +300,8 @@ int main(int argc, char** argv) {
         run(10, KRIGHT);
         read_debug(&d);
         check(d.px > bx + 30, "R でダッシュする");
+        run(400, 0);
+        check(audio_end("bgm_stage") > 200.0, "ステージで BGM/効果音が鳴っている");
         /* 自動プレイで 30 秒 */
         DebugInfo prev = d;
         int stuck = 0;
