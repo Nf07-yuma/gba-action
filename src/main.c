@@ -268,10 +268,16 @@ static void pause_menu_draw(void) {
         else text_fill(9, 9 + i * 2, 1, 1, HUD_TILE_SOLID_DARK, BGPAL_HUD);
         text_put(11, 9 + i * 2, items[i], i == pause_cursor ? BGPAL_HUD_C : BGPAL_HUD);
     }
+    bg_dim = 10; /* 背景を暗くして文字を読みやすく */
+    /* 操作のおさらい */
+    text_put_center(16, "B SLASH  A JUMP  R DASH", BGPAL_HUD_C);
+    text_put_center(17, "HOLD B: CHARGE SLASH", BGPAL_HUD);
+    text_put_center(18, "DASH + B: DASH SLASH", BGPAL_HUD);
 }
 
 static void pause_menu_clear(void) {
-    for (int y = 6; y < 15; y++) text_put(0, y, "                              ", BGPAL_HUD);
+    for (int y = 6; y < 19; y++) text_put(0, y, "                              ", BGPAL_HUD);
+    bg_dim = 0;
 }
 
 static void play_update(void) {
