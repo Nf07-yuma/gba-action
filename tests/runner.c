@@ -59,6 +59,7 @@ typedef struct {
     uint32_t popups;
     uint32_t rank, rank_hist;
     uint32_t ambient;
+    uint32_t best_time;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -707,6 +708,7 @@ int main(int argc, char** argv) {
         read_debug(&d);
         print_debug("stage end");
         check(d.clears > clears0 || d.state == GS_ENDING, "ボットがこのステージをクリアできる");
+        uint32_t tf = 0;
         if (d.clears > clears0) {
             run(60, 0);
             read_debug(&d);
@@ -717,6 +719,12 @@ int main(int argc, char** argv) {
             for (int i = 0; i < 4; i++) cl |= (uint32_t)core->busRead8(core, 0x0E00000C + i) << (i * 8);
             uint32_t saved = (cl >> (16 + st * 3)) & 7;
             check(saved == (d.rank & 3) + 1, "ステージの最高ランクが SRAM に保存される");
+            uint32_t tmagic = 0;
+            tf = 0;
+            for (int i = 0; i < 4; i++) tmagic |= (uint32_t)core->busRead8(core, 0x0E000020 + i) << (i * 8);
+            tf = core->busRead8(core, 0x0E000024 + st * 2) | (core->busRead8(core, 0x0E000025 + st * 2) << 8);
+            printf("  ベストタイム: %u.%02u 秒\n", tf / 60, (tf % 60) * 100 / 60);
+            check(d.best_time == 1 && tmagic == 0x31545453u && tf > 0, "初クリアでベストタイムが SRAM に保存される");
             /* リセットすると計測値が消えるので、先に処理落ちを確認しておく */
             printf("  処理負荷 (リセット前): 最大 %u / 228 走査線, 処理落ち %u フレーム\n", d.max_lines, d.lag_frames);
             check(d.lag_frames == 0, "このステージで処理落ちが発生していない");
@@ -724,6 +732,25 @@ int main(int argc, char** argv) {
             core->reset(core);
             run(120, 0);
             screenshot("title_best_rank");
+            if (st == 0) {
+                /* もう一度同じステージをクリア: 同じタイムなので更新されず BEST が表示される */
+                core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), st);
+                core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
+                run(30, 0);
+                wait_state(GS_PLAY, 400);
+                DebugInfo p2;
+                read_debug(&p2);
+                int stuck2 = 0;
+                uint32_t c0 = p2.clears;
+                for (int t = 0; t < 60 * 120 && p2.clears == c0; t++) bot_step(t, &p2, &stuck2);
+                run(60, 0);
+                read_debug(&d);
+                screenshot("stage_clear_best");
+                uint32_t tf2 = core->busRead8(core, 0x0E000024) | (core->busRead8(core, 0x0E000025) << 8);
+                printf("  2 回目: %s (記録 %u → %u フレーム)\n", d.best_time ? "ベスト更新" : "更新なし", tf, tf2);
+                check(d.state == GS_CLEAR && tf2 <= tf && (d.best_time ? tf2 < tf : tf2 == tf),
+                      "2 回目のクリアでベストタイムは速いときだけ更新される");
+            }
         }
     } else if (strncmp(scenario, "boss", 4) == 0) {
         /* ボス戦へ直行し、ボスの出現・攻撃・被弾を検証 (boss=ステージ3, boss5=ステージ5) */
