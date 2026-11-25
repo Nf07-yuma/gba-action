@@ -25,7 +25,9 @@
 - **3 段コンボ**: 横薙ぎ → 斬り上げ → 叩きつけ。3 段目は盾持ちの敵のガードも砕く
 - **攻撃キャンセル**: 攻撃後の硬直はジャンプ・ダッシュでキャンセル可能
 - **弾消し**: 斬撃で敵弾をかき消せる（CHAIN も伸びる）
+- **全5ステージ**: 工場 → スカイウェイ → 鋳造所(ボス) → データハイウェイ → 中枢コア(最終ボス)
 - **ボス戦**: 工場の守護ロボ GUARDIAN。突進を壁に誘導すると気絶して大チャンス
+- **最終ボス**: OVERLORD CORE。装甲が開いて目が露出したときだけ攻撃が通る
 
 ## ビルド方法
 
@@ -44,7 +46,7 @@ mGBA のコアライブラリを使い、ROM を画面なしで実行して自�
 sudo apt-get install libmgba-dev zlib1g-dev
 make test                                        # スモークテスト (build/test-out/*.png)
 build/runner steel_chain.gba build/bot-out bot   # ボットによる通しプレイ
-build/runner steel_chain.gba build/boss-out boss # ボス戦へ直行してボット戦術で撃破を検証
+build/runner steel_chain.gba build/boss-out boss # ボス戦へ直行してボット戦術で撃破を検証 (boss5 で最終ボス)
 build/runner steel_chain.gba build/st4 stage4    # 指定ステージからボットでプレイ
 ```
 

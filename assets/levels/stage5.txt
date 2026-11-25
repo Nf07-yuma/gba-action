@@ -1,0 +1,14 @@
+;name=SECTOR 5  OVERLORD CORE
+;theme=4
+|#####################################################################################################################################################################################################################################|
+|#####################################################################################################################################################################################################################################|
+|ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg|
+|bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbtbbbbbjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb|
+|ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbwwbbwwbgggggggggggggggggggggggggggggggggggggg############gggggggggggggggggggggggggggggggggggggggggggbwwbbwwbgggggggggbwwbbwwbggggg|
+|ggggggggbwwbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggdggggggggggggggggggg############ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg|
+|bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb|
+|gggggggggggggggggggggggggggggggggggggggg===ggg===ggg===gggggggtggggggggtggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg|
+|ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg###gggggg###gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg|
+|bbbbPbbbbbbbbbbbbbbbbbsbbbbbbjbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbb###bbbbbb###bbbbbbbbbbLbbbbbbbbbbbbbbbCbbbb+bbbbbbbbbsbbbbbbsbbbbbbsbbbbbbbbbbbbbvbbbbbbbbbbbbbbbbbjbbbbcbbbsbbbbbbbbLbbbbbblbbbbbbbbbbbbbbCbbb+bbbbbbbbbbbbbbbbbbbZbbbb|
+|#######################################^^^^^^^^^^^^^^^^#########################       ########################################################################################^^^^^^^^^^^^^^########################################|
+|#######################################^^^^^^^^^^^^^^^^#########################       ########################################################################################^^^^^^^^^^^^^^########################################|

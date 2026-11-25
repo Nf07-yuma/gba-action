@@ -4,6 +4,27 @@
 static OamEntry oam_buf[128] ALIGN4;
 static int oam_count;
 u16 sprite_tile_base[SPR_COUNT];
+/* 大型スプライト (ボス) は常駐させず、表示中のフレームだけを専用枠へ転送する */
+static u16 dyn_base;
+static s16 dyn_loaded = -1, dyn_pending = -1;
+
+static int is_dynamic(int i) {
+    return (i >= SPR_BOSS_IDLE0 && i <= SPR_BOSS_SHOOT) || (i >= SPR_CORE_CLOSED && i <= SPR_CORE_GLOW);
+}
+
+/* ボスの描画前に呼ぶ: 次の VBlank で転送する */
+void sprite_request_dynamic(int spr) {
+    if (spr != dyn_loaded) dyn_pending = (s16)spr;
+}
+
+/* VBlank 中に呼ぶ */
+void sprite_flush_dynamic(void) {
+    if (dyn_pending < 0) return;
+    const SpriteFrame* f = &sprite_frames[dyn_pending];
+    dma3_copy32(OBJ_TILES + dyn_base * 16, f->data, f->tiles * 8);
+    dyn_loaded = dyn_pending;
+    dyn_pending = -1;
+}
 
 void vsync(void) { bios_vblank_wait(); }
 
@@ -20,10 +41,17 @@ void video_init(void) {
     u32 t = 0;
     for (int i = 0; i < SPR_COUNT; i++) {
         const SpriteFrame* f = &sprite_frames[i];
+        if (is_dynamic(i)) continue;
         sprite_tile_base[i] = t;
         dma3_copy32(OBJ_TILES + t * 16, f->data, f->tiles * 8);
         t += f->tiles;
     }
+    /* 動的枠 (64x64 = 64 タイル) */
+    dyn_base = (u16)t;
+    for (int i = 0; i < SPR_COUNT; i++)
+        if (is_dynamic(i)) sprite_tile_base[i] = dyn_base;
+    dyn_loaded = dyn_pending = -1;
+    g_debug.obj_tiles = t + 64;
     /* マップ初期化 */
     dma3_fill32(SCREENBLOCK(SBB_LEVEL), 0, 2 * 0x800 / 4);
     dma3_fill32(SCREENBLOCK(SBB_HUD), 0, 0x800 / 4);

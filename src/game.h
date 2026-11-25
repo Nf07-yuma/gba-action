@@ -49,6 +49,8 @@ void oam_end(void);
 /* 画面座標に描画。flip: 左右反転, pal: OBJPAL_*, prio: 0-3 */
 void oam_put(int spr, int x, int y, int flip, int pal, int prio);
 void oam_put_blend(int spr, int x, int y, int flip, int pal, int prio);
+void sprite_request_dynamic(int spr);
+void sprite_flush_dynamic(void);
 void vsync(void);
 
 /* ---- テキスト (BG0) ---- */
@@ -143,7 +145,18 @@ void items_draw(void);
 /* ---- boss.c ---- */
 extern s32 boss_lock_x;
 void boss_reset(void);
-int boss_check_start(int spawn_cx, int spawn_cy);
+int boss_check_start(int spawn_cx, int spawn_cy, int param);
+/* core.c (最終ボス) */
+int core_active(void);
+int core_hp(void);
+int core_hp_max(void);
+int core_state_id(void);
+int core_x(void);
+int core_dead(void);
+void core_reset(void);
+void core_start(int spawn_cx, int spawn_cy);
+void core_update(void);
+void core_draw(void);
 void boss_update(void);
 void boss_draw(void);
 void boss_hud(void);
@@ -227,6 +240,7 @@ typedef struct {
     u32 cmd_arg;
     u32 lift_count;
     s32 lifts[8]; /* x,y x4 */
+    u32 obj_tiles; /* 使用中の OBJ タイル数 (1024 以下であること) */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

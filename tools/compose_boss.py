@@ -87,6 +87,37 @@ def frame(bob=0, lean=0, eye="e", crouch=0, recoil=0, muzzle=False, legs_tuck=0)
     return ["".join(CH[c.get((x, y), 0)] for x in range(W)) for y in range(H)]
 
 
+def core_frame(open_k=0, eye="r", glow=False):
+    """最終ボス OVERLORD CORE (64x64): 球体の装甲が上下に開いて目が露出する"""
+    layers = []
+    # 外周のリング (固定アーム)
+    layers.append(ellipse(32, 32, 30, 30, I["g"], I["G"], I["k"]))
+    layers.append(ellipse(32, 32, 26, 26, I["k"]))
+    # 内部 (目)
+    eye_c = I[eye]
+    layers.append(ellipse(32, 32, 18, 18, I["R"], I["r"]))
+    layers.append(ellipse(32, 32, 12, 12, eye_c, I["W"] if glow else I["o"], I["R"]))
+    layers.append(ellipse(30, 30, 4, 4, I["W"], I["W"]))
+    # 装甲 (上下の殻): open_k ピクセル開く
+    top = ellipse(32, 32 - open_k, 24, 24, I["G"], I["h"], I["g"])
+    top = {(x, y): c for (x, y), c in top.items() if y < 32 - open_k}
+    bot = ellipse(32, 32 + open_k, 24, 24, I["G"], I["h"], I["g"])
+    bot = {(x, y): c for (x, y), c in bot.items() if y >= 32 + open_k}
+    for part in (top, bot):
+        # 装甲の継ぎ目とランプ
+        for (x, y) in list(part.keys()):
+            if (x - 32) % 12 == 0:
+                part[(x, y)] = I["g"]
+        layers.append(part)
+    lamp = {}
+    for i, x in enumerate((20, 32, 44)):
+        lamp[(x, 14 - open_k)] = I["C"] if glow else I["c"]
+        lamp[(x, 50 + open_k)] = I["C"] if glow else I["c"]
+    layers.append(lamp)
+    c = cp.compose(layers)
+    return ["".join(CH[c.get((x, y), 0)] for x in range(W)) for y in range(H)]
+
+
 def main():
     frames = {
         "boss_idle0": frame(0),
@@ -94,6 +125,10 @@ def main():
         "boss_charge": frame(2, lean=-3, eye="y", crouch=1),
         "boss_jump": frame(-2, legs_tuck=5),
         "boss_shoot": frame(0, recoil=3, eye="y", muzzle=True),
+        "core_closed": core_frame(0),
+        "core_half": core_frame(5),
+        "core_open": core_frame(11, eye="r"),
+        "core_glow": core_frame(11, eye="y", glow=True),
     }
     out = ["# 自動生成: tools/compose_boss.py"]
     for name, rows in frames.items():

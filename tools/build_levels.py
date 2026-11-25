@@ -154,7 +154,51 @@ def stage4():
     save("stage4.txt", "SECTOR 4  DATA HIGHWAY", 3, H, c)
 
 
+def stage5():
+    H = 12
+    G = 10
+    c = []
+
+    def room(w, extra, ground=None, ceiling=True):
+        rows = {}
+        for y in range(2, G):
+            rows[y] = ["b" * w if y % 3 == 0 else "g" * w]
+        if ceiling:
+            rows[0] = ["#" * w]
+            rows[1] = ["#" * w]
+        for y, v in extra.items():
+            rows.setdefault(y, [])
+            rows[y] += v if isinstance(v, list) else [v]
+        return chunk(H, w, rows, (G, ground or [(0, w - 1)]))
+
+    def spikes(ch, x0, x1):
+        return [r[:x0] + ("^" * (x1 - x0 + 1) if i >= G else r[x0:x1 + 1]) + r[x1 + 1:] for i, r in enumerate(ch)]
+
+    c.append(room(16, {9: "@4:P", 5: "@8:bwwb"}))
+    c.append(room(20, {9: ["@6:s", "@13:j", "@17:c"]}))
+    # トゲ床 + 足場
+    c.append(spikes(room(22, {7: ["@4:===", "@10:===", "@16:==="], 6: "@11:d"}, [(0, 2), (19, 21)]), 3, 18))
+    c.append(room(18, {9: ["@3:###", "@12:###"], 8: ["@3:###", "@12:###"], 7: ["@4:t", "@13:t"]}))
+    # 動く足場 (穴の上)
+    c.append(room(18, {9: "@7:L"}, [(0, 3), (11, 17)]))
+    c.append(room(16, {9: ["@5:C", "@10:+"], 4: "@4:bwwbbwwb"}))
+    # 盾兵の群れ
+    c.append(room(24, {9: ["@4:s", "@11:s", "@18:s"], 5: "@14:d"}))
+    # 縦の足場で上段へ, 上段にタレット
+    c.append(room(22, {2: "", 4: "@10:############", 5: "@10:############", 9: "@8:v", 3: ["@13:t", "@19:j"]},
+                  [(0, 21)]))
+    c.append(room(16, {9: ["@4:j", "@9:c", "@13:s"]}))
+    c.append(spikes(room(24, {9: ["@6:L", "@13:l"]}, [(0, 2), (17, 23)]), 3, 16))
+    c.append(room(14, {9: ["@4:C", "@8:+"], 4: "@3:bwwbbwwb"}))
+    # 最終闘技場 (末尾 15 マスでカメラ固定)
+    c.append(room(19, {4: "@6:bwwbbwwb", 9: "@14:Z"}))
+    for i, ch in enumerate(c):
+        c[i] = [r for r in ch]
+    save("stage5.txt", "SECTOR 5  OVERLORD CORE", 4, H, c)
+
+
 if __name__ == "__main__":
     stage2()
     stage3()
     stage4()
+    stage5()

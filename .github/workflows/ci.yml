@@ -32,12 +32,14 @@ jobs:
         run: make test
 
       - name: ボス戦テスト (ボット戦術で撃破できるか)
-        run: build/runner steel_chain.gba build/boss-out boss
+        run: |
+          build/runner steel_chain.gba build/boss-out boss
+          build/runner steel_chain.gba build/boss5-out boss5
 
       - name: ステージ別ボット検証 (レポート)
         continue-on-error: true
         run: |
-          for s in 1 2 3 4; do
+          for s in 1 2 3 4 5; do
             build/runner steel_chain.gba build/stage$s-out stage$s | grep -E "stage end|death|このステージ" | tee -a build/stage-report.txt
           done
 
@@ -55,6 +57,7 @@ jobs:
             build/test-out/*.wav
             build/bot-out/*.png
             build/boss-out/*.png
+            build/boss5-out/*.png
             build/bot-report.txt
             build/stage-report.txt
           if-no-files-found: warn
