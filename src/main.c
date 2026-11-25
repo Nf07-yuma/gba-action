@@ -19,6 +19,14 @@ static const char* const chain_words[] = {"NICE!", "GREAT!", "AMAZING!", "UNSTOP
 static u8 popup_t;
 static char popup_text[24];
 
+/* 画面上部に短いメッセージを出す (CHAIN の節目・中間地点など) */
+void game_popup(const char* msg) {
+    int i = 0;
+    for (; msg[i] && i < 23; i++) popup_text[i] = msg[i];
+    popup_text[i] = 0;
+    popup_t = POPUP_LEN;
+}
+
 static void popup_draw(void) {
     if (!popup_t) return;
     popup_t--;

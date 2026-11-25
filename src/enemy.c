@@ -475,11 +475,16 @@ static void update_prop(Ent* e) {
         update_lift(e);
         break;
     case OBJ_CHECKPOINT:
-        if (!(obj_flag[e->obj] & OF_LIT) && body_overlap(&e->b, &player.b)) {
+        /* ゴールと同じく、柱の列を通過すれば高さに関係なく反応 (飛び越しても点く) */
+        if (!(obj_flag[e->obj] & OF_LIT) && player.state != PS_DEAD &&
+            FROM_FP(player.b.x) < FROM_FP(e->b.x) + e->b.w && FROM_FP(e->b.x) < FROM_FP(player.b.x) + player.b.w &&
+            FROM_FP(player.b.y) < FROM_FP(e->b.y) + e->b.h) {
             obj_flag[e->obj] |= OF_LIT;
             game_set_checkpoint(px_center(e), FROM_FP(e->b.y) + e->b.h);
             sfx_play(SFX_CHECK);
             fx_spawn(FX_SPARK, px_center(e) - 4, FROM_FP(e->b.y) - 2, 0);
+            g_debug.checkpoints++;
+            game_popup("CHECKPOINT");
         }
         break;
     case OBJ_GOAL:
