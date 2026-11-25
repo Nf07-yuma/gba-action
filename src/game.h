@@ -34,13 +34,16 @@ INLINE int key_released(u16 k) { return (~key_cur & key_prev) & k; }
 /* ---- video.c ---- */
 #define BG_HUD   0
 #define BG_LEVEL 1
-#define BG_SKY   2
+#define BG_SKY   3  /* 遠景 (同じ優先度では番号が小さい BG が手前) */
+#define BG_MID   2  /* 中景: 工場シルエット */
 #define SBB_LEVEL 28  /* 28,29: 64x32 */
 #define SBB_HUD   30
 #define SBB_SKY   31
+#define SBB_MID   27
 #define CBB_LEVEL 0
 #define CBB_UI    1
 #define CBB_SKY   2
+#define CBB_MID   3
 
 extern u16 sprite_tile_base[SPR_COUNT];
 void video_init(void);

@@ -94,7 +94,7 @@ void fx_flash_apply(void) {
         flash_t--;
     } else {
         /* 半透明スプライト (残像) 用: 第2対象を BG1/BG2/背景色に */
-        REG_BLDCNT = 0x2640;
+        REG_BLDCNT = 0x2E40; /* 第2対象: BG1/BG2/BG3/背景色 */
         REG_BLDALPHA = 0x0A08;
         REG_BLDY = 0;
     }

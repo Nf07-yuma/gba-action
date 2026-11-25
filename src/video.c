@@ -37,6 +37,7 @@ void video_init(void) {
     dma3_copy32(CHARBLOCK(CBB_LEVEL), level_tiles, sizeof(level_tiles) / 4);
     dma3_copy32(CHARBLOCK(CBB_UI), ui_tiles, sizeof(ui_tiles) / 4);
     dma3_copy32(CHARBLOCK(CBB_SKY), sky_tiles, sizeof(sky_tiles) / 4);
+    dma3_copy32(CHARBLOCK(CBB_MID), mid_tiles, sizeof(mid_tiles) / 4);
     /* スプライトタイルを全て常駐ロード */
     u32 t = 0;
     for (int i = 0; i < SPR_COUNT; i++) {
@@ -56,10 +57,13 @@ void video_init(void) {
     dma3_fill32(SCREENBLOCK(SBB_LEVEL), 0, 2 * 0x800 / 4);
     dma3_fill32(SCREENBLOCK(SBB_HUD), 0, 0x800 / 4);
     dma3_copy32(SCREENBLOCK(SBB_SKY), sky_map, sizeof(sky_map) / 4);
+    dma3_copy32(SCREENBLOCK(SBB_MID), mid_map, sizeof(mid_map) / 4);
+    dma3_copy32(PAL_BG + BGPAL_MID * 16, theme_mid_pals, 8);
 
     REG_BGCNT(BG_HUD) = BG_PRIO(0) | BG_CBB(CBB_UI) | BG_SBB(SBB_HUD) | BG_SIZE_32x32;
     REG_BGCNT(BG_LEVEL) = BG_PRIO(2) | BG_CBB(CBB_LEVEL) | BG_SBB(SBB_LEVEL) | BG_SIZE_64x32;
     REG_BGCNT(BG_SKY) = BG_PRIO(3) | BG_CBB(CBB_SKY) | BG_SBB(SBB_SKY) | BG_SIZE_32x32;
+    REG_BGCNT(BG_MID) = BG_PRIO(3) | BG_CBB(CBB_MID) | BG_SBB(SBB_MID) | BG_SIZE_32x32;
     for (int i = 0; i < 4; i++) {
         REG_BGHOFS(i) = 0;
         REG_BGVOFS(i) = 0;
@@ -70,7 +74,7 @@ void video_init(void) {
         oam_buf[i].attr2 = 0;
     }
     dma3_copy32(MEM_OAM, oam_buf, sizeof(oam_buf) / 4);
-    REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_OBJ;
+    REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_BG3 | DCNT_OBJ;
 }
 
 void oam_begin(void) { oam_count = 0; }
