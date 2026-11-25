@@ -127,6 +127,8 @@ void enemies_spawn_check(void);
 void enemies_update(void);
 void enemies_draw(void);
 int enemies_alive(void);
+void lifts_apply(Body* b);
+int lifts_debug(s32* xy, int max);
 
 /* ---- objects (bullets / items / checkpoints) ---- */
 void bullet_fire(s32 x, s32 y, s32 vx, s32 vy);
@@ -223,6 +225,8 @@ typedef struct {
     s32 boss_x;
     u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg) */
     u32 cmd_arg;
+    u32 lift_count;
+    s32 lifts[8]; /* x,y x4 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u
