@@ -172,6 +172,7 @@ static void enemy_hit(Ent* e, int dmg, int kbx, int kby, int stop, int pierce) {
     if (!pierce && e->type == OBJ_SHIELD && player.combo < 2 && e->dir == -dir && player.combo != 3) {
         fx_spawn(FX_SPARK, px_center(e) - 4 - dir * 6, py_center(e) - 4, 0);
         sfx_play(SFX_GUARD);
+        e->state = 10; /* ガード演出 */
         player.b.vx = -dir * 0x200;
         game.hitstop = 2;
         return;
@@ -361,6 +362,7 @@ static void update_jumper(Ent* e) {
 }
 
 static void update_shield(Ent* e) {
+    if (e->state) e->state--;
     int dx = player_cx() - px_center(e);
     if (!e->hitstun) {
         if (!(e->t & 31)) e->dir = dx < 0 ? -1 : 1;
@@ -547,12 +549,41 @@ void enemies_draw(void) {
         int pal = e->flash ? ((e->flash & 2) ? OBJPAL_FLASH : OBJPAL_NORMAL) : OBJPAL_NORMAL;
         int flip = e->dir > 0;
         int spr;
+        /* 被弾リアクション: 小刻みに震える */
+        if (e->flash) cx += (e->flash & 2) ? 1 : -1;
         switch (e->type) {
-        case OBJ_CRAWLER: spr = SPR_CRAWLER0 + ((e->t >> 3) & 1); oam_put(spr, cx - 8, bot - 15, flip, pal, 2); break;
-        case OBJ_DRONE:   spr = SPR_DRONE0 + ((e->t >> 1) & 1); oam_put(spr, cx - 8, bot - 14, flip, pal, 2); break;
-        case OBJ_TURRET:  spr = e->state ? SPR_TURRET1 : SPR_TURRET0; oam_put(spr, cx - 8, bot - 16, flip, pal, 2); break;
-        case OBJ_JUMPER:  spr = e->b.on_ground ? SPR_JUMPER0 : SPR_JUMPER1; oam_put(spr, cx - 8, bot - 16, flip, pal, 2); break;
-        case OBJ_SHIELD:  spr = SPR_SHIELD0 + ((ABS(e->b.vx) > 0 && (e->t >> 3) & 1) ? 1 : 0); oam_put(spr, cx - 8 + (flip ? 2 : -2), bot - 16, flip, pal, 2); break;
+        case OBJ_CRAWLER: {
+            /* 歩行: 2 コマ + 上下動 */
+            int ph = (e->t >> 3) & 3;
+            spr = SPR_CRAWLER0 + (ph & 1);
+            oam_put(spr, cx - 8, bot - 15 - (ph == 1 && !e->hitstun), flip, pal, 2);
+            break;
+        }
+        case OBJ_DRONE: {
+            /* 浮遊感: ゆっくり上下, 急降下中は前傾 (左右反転で向きを強調) */
+            int bob = e->state == 1 ? 0 : (sin64[(e->t * 2) & 63] / 32);
+            spr = SPR_DRONE0 + ((e->t >> 1) & 1);
+            oam_put(spr, cx - 8, bot - 14 + bob, flip, pal, 2);
+            break;
+        }
+        case OBJ_TURRET:
+            /* 発射時に砲身が反動で下がる */
+            spr = e->state ? SPR_TURRET1 : SPR_TURRET0;
+            oam_put(spr, cx - 8 + (e->state > 4 ? (flip ? -1 : 1) : 0), bot - 16, flip, pal, 2);
+            break;
+        case OBJ_JUMPER: {
+            /* 跳ぶ直前にしゃがむ */
+            int crouch = e->b.on_ground && e->cool > 0 && e->cool < 8;
+            spr = e->b.on_ground ? SPR_JUMPER0 : SPR_JUMPER1;
+            oam_put(spr, cx - 8, bot - 16 + crouch * 2, flip, pal, 2);
+            break;
+        }
+        case OBJ_SHIELD:
+            /* ガードした直後は盾が光る */
+            spr = SPR_SHIELD0 + ((ABS(e->b.vx) > 0 && (e->t >> 3) & 1) ? 1 : 0);
+            if (e->state && (e->state & 2)) pal = OBJPAL_FLASH;
+            oam_put(spr, cx - 8 + (flip ? 2 : -2), bot - 16, flip, pal, 2);
+            break;
         case OBJ_LASER: {
             u16 c = e->t % LASER_CYCLE;
             int d = laser_dir(e);
