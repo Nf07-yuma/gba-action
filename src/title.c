@@ -1,5 +1,6 @@
 /* タイトル画面とデモプレイ (アトラクトモード) */
 #include "game.h"
+#include "version.h"
 
 static int title_cursor;
 static u8 demo_count;              /* デモの回数 (ステージを交互にする) */
@@ -108,6 +109,7 @@ void title_update(void) {
         }
         text_put_center(17, "B:SLASH  A:JUMP  R:DASH", BGPAL_HUD_C);
         text_put_center(19, "(C) 2026 STEEL CHAIN PROJECT", BGPAL_HUD);
+        text_put(17, 18, "BUILD " GAME_VERSION, BGPAL_HUD_C);
     }
     /* 難易度選択 (左右で切り替え) */
     if (key_hit(KEY_LEFT | KEY_RIGHT | KEY_SELECT)) {
