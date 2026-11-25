@@ -81,7 +81,7 @@ void game_stage_clear(void) {
     player.state_t = 0;
     set_state(GS_CLEAR);
     sfx_play(SFX_CHECK);
-    music_stop();
+    music_play(SONG_CLEAR);
 }
 
 void game_boss_defeated(int x, int y) {
@@ -179,7 +179,10 @@ static void intro_update(void) {
     if (game.state_t == 1) {
         REG_DISPCNT = DCNT_MODE0 | DCNT_OBJ_1D | DCNT_BG0 | DCNT_BG1 | DCNT_BG2 | DCNT_OBJ;
         stage_begin(0);
-        music_play(SONG_STAGE);
+        {
+            static const u8 stage_song[] = {SONG_STAGE, SONG_STAGE2, SONG_STAGE, SONG_STAGE2, SONG_FINAL};
+            music_play(stage_song[game.stage < 5 ? game.stage : 0]);
+        }
         char buf[16] = "STAGE 1";
         buf[6] = (char)('1' + game.stage);
         text_put_center(7, buf, BGPAL_HUD_Y);
@@ -281,7 +284,7 @@ static void clear_update(void) {
 
 static void gameover_update(void) {
     if (game.state_t == 1) {
-        music_stop();
+        music_play(SONG_GAMEOVER);
         text_clear();
         text_put_center(7, "GAME OVER", BGPAL_HUD);
         if (save_record(game.score, game.chain_best, 0)) text_put_center(9, "NEW RECORD!", BGPAL_HUD_Y);
@@ -371,6 +374,9 @@ int main(void) {
             game.stage = (u8)g_debug.cmd_arg;
             if (game.lives <= 0) game.lives = 3;
             set_state(GS_STAGE_INTRO);
+            g_debug.cmd = 0;
+        } else if (g_debug.cmd == 3) {
+            music_play((int)g_debug.cmd_arg);
             g_debug.cmd = 0;
         } else if (g_debug.cmd == 2 && game.state == GS_PLAY) {
             player.b.x = TO_FP(g_debug.cmd_arg);

@@ -517,6 +517,22 @@ int main(int argc, char** argv) {
         print_debug("after bot");
         read_debug(&d);
         check(d.kills > 0 || d.score > 0, "敵を倒せる/スコアが入る");
+    } else if (strcmp(scenario, "music") == 0) {
+        /* 全曲を録音して WAV に保存 (試聴用) */
+        static const char* names[] = {"title", "stage", "boss", "stage2", "final", "lastboss", "clear", "gameover"};
+        for (int i = 0; i < 8; i++) {
+            core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), i);
+            core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 3);
+            run(2, 0);
+            audio_begin();
+            run(i >= 6 ? 240 : 900, 0);
+            char nm[64];
+            snprintf(nm, sizeof(nm), "song_%d_%s", i + 1, names[i]);
+            double rms = audio_end(nm);
+            char msg[96];
+            snprintf(msg, sizeof(msg), "曲 %s が鳴る", names[i]);
+            check(rms > 200.0, msg);
+        }
     } else if (strncmp(scenario, "stage", 5) == 0) {
         /* 指定ステージ (1 始まり) からボットでプレイ */
         int st = atoi(scenario + 5) - 1;

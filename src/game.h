@@ -243,7 +243,7 @@ typedef struct {
     s32 boss_hp;
     u32 boss_state;
     s32 boss_x;
-    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg) */
+    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg), 3=曲再生(arg) */
     u32 cmd_arg;
     u32 lift_count;
     s32 lifts[8]; /* x,y x4 */

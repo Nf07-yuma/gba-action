@@ -36,6 +36,9 @@ jobs:
           build/runner steel_chain.gba build/boss-out boss
           build/runner steel_chain.gba build/boss5-out boss5
 
+      - name: 全曲の録音 (試聴用 WAV)
+        run: build/runner steel_chain.gba build/music-out music
+
       - name: ステージ別ボット検証 (レポート)
         continue-on-error: true
         run: |
@@ -55,6 +58,7 @@ jobs:
             steel_chain.gba
             build/test-out/*.png
             build/test-out/*.wav
+            build/music-out/*.wav
             build/bot-out/*.png
             build/boss-out/*.png
             build/boss5-out/*.png

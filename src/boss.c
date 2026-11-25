@@ -53,7 +53,7 @@ int boss_check_start(int spawn_cx, int spawn_cy, int param) {
         boss_lock_x = lock;
         hud_last = -1;
         core_start(spawn_cx, spawn_cy);
-        music_play(SONG_BOSS);
+        music_play(SONG_LASTBOSS);
         return 1;
     }
     kind = 0;

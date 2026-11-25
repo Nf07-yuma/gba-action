@@ -766,6 +766,7 @@ def parse_note(tok, where):
 
 def load_song(path):
     speed = 8
+    loop = 1
     chans = {"lead": [], "bass": [], "drum": []}
     cur = None
     with open(path, encoding="utf-8") as f:
@@ -773,6 +774,9 @@ def load_song(path):
             line = raw.split(";")[0].strip() if not raw.startswith(";speed") else raw.strip()
             if raw.startswith(";speed"):
                 speed = int(raw.split("=")[1])
+                continue
+            if raw.startswith(";loop"):
+                loop = int(raw.split("=")[1])
                 continue
             if not line:
                 continue
@@ -791,7 +795,7 @@ def load_song(path):
     for k in chans:
         if not chans[k]:
             chans[k] = [MUS_OFF]
-    return speed, chans
+    return speed, loop, chans
 
 
 def freq_tables():
@@ -980,7 +984,7 @@ def main():
     H.append("extern const u16 freq_wave[128];")
     C.append(f"const u16 freq_square[128] = {{\n{c_u16(sq)}\n}};")
     C.append(f"const u16 freq_wave[128] = {{\n{c_u16(wv)}\n}};")
-    H.append("typedef struct { const u8* lead; const u8* bass; const u8* drum; u16 lead_len, bass_len, drum_len; u8 speed; } Song;")
+    H.append("typedef struct { const u8* lead; const u8* bass; const u8* drum; u16 lead_len, bass_len, drum_len; u8 speed, loop; } Song;")
     H.append("#define MUS_HOLD 0")
     H.append("#define MUS_OFF 1")
     music_dir = os.path.join(ASSETS, "music")
@@ -992,10 +996,10 @@ def main():
     H.append("extern const Song songs[SONG_COUNT];")
     entries = []
     for i, fn in enumerate(song_files):
-        speed, ch = load_song(os.path.join(music_dir, fn))
+        speed, loop, ch = load_song(os.path.join(music_dir, fn))
         for k in ("lead", "bass", "drum"):
             C.append(f"static const u8 song{i}_{k}[{len(ch[k])}] = {{\n{c_u8(ch[k])}\n}};")
-        entries.append(f"    {{ song{i}_lead, song{i}_bass, song{i}_drum, {len(ch['lead'])}, {len(ch['bass'])}, {len(ch['drum'])}, {speed} }},")
+        entries.append(f"    {{ song{i}_lead, song{i}_bass, song{i}_drum, {len(ch['lead'])}, {len(ch['bass'])}, {len(ch['drum'])}, {speed}, {loop} }},")
     C.append("const Song songs[SONG_COUNT] = {")
     C += entries
     C.append("};")
