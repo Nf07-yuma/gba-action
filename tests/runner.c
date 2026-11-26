@@ -427,6 +427,8 @@ static void bot_step(int t, DebugInfo* prev, int* stuck) {
     } else if (d.state == GS_TITLE || d.state == GS_CLEAR || d.state == GS_GAMEOVER || d.state == GS_STAGE_INTRO) {
         if (t % 20 == 0) keys |= KSTART;
     }
+    if (getenv("HURT_LOG") && d.state == GS_PLAY && d.hp < prev->hp && d.lives == prev->lives)
+        printf("  [hurt] stage=%u px=%d cell=%d hp %d->%d enemies=%u\n", d.stage + 1, d.px, (d.px + 5) >> 4, prev->hp, d.hp, d.enemies);
     if (d.state == GS_DEAD && prev->state != GS_DEAD) printf("  [death] frame=%u pos=(%d,%d) cell=(%d,%d) hp=%d\n", d.frame, prev->px, prev->py, (prev->px + 5) >> 4, (prev->py + 23) >> 4, prev->hp);
     *prev = d;
     run(1, keys);
