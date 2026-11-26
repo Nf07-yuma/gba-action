@@ -60,6 +60,9 @@ jobs:
       - name: デモプレイ (タイトル放置) テスト
         run: build/runner steel_chain.gba build/attract-out attract
 
+      - name: ゲームオーバー/コンティニュー テスト
+        run: build/runner steel_chain.gba build/gameover-out gameover
+
       - name: 全曲の録音 (試聴用 WAV)
         run: build/runner steel_chain.gba build/music-out music
 

@@ -412,6 +412,7 @@ static void clear_update(void) {
 static void gameover_update(void) {
     if (game.state_t == 1) {
         music_play(SONG_GAMEOVER);
+        bg_dim = 10;
         text_clear();
         text_put_center(7, "GAME OVER", BGPAL_HUD);
         if (save_record(game.score, game.chain_best, 0)) text_put_center(9, "NEW RECORD!", BGPAL_HUD_Y);
@@ -419,6 +420,18 @@ static void gameover_update(void) {
         text_put_center(13, "SELECT: TITLE", BGPAL_HUD_C);
     }
     oam_begin();
+    /* コンティニューのカウントダウン (10 秒で自動的にタイトルへ) */
+    if (game.state_t >= 30) {
+        u32 left = (game.state_t - 30) / 60;
+        if (left >= 10) {
+            title_enter();
+            return;
+        }
+        char buf[16] = "CONTINUE? 9";
+        buf[10] = (char)('9' - left);
+        text_put_center(15, buf, left >= 7 ? BGPAL_HUD_Y : BGPAL_HUD);
+        if ((game.state_t - 30) % 60 == 0) sfx_play(SFX_SELECT);
+    }
     if (game.state_t > 30 && key_hit(KEY_START | KEY_A)) {
         game.lives = START_LIVES;
         game.score = stage_start_score / 2;
@@ -517,6 +530,11 @@ int main(void) {
             game.stage = (u8)g_debug.cmd_arg;
             if (game.lives <= 0) game.lives = START_LIVES;
             game_set_state(GS_STAGE_INTRO);
+            g_debug.cmd = 0;
+        } else if (g_debug.cmd == 5 && game.state == GS_PLAY) {
+            /* テスト用: 残機 0 にしてミス (ゲームオーバー画面へ) */
+            game.lives = 0;
+            player_kill();
             g_debug.cmd = 0;
         } else if (g_debug.cmd == 4) {
             music_stop();
