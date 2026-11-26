@@ -157,6 +157,7 @@ static void stage_begin(int respawn) {
         game.stage_time = 0;
         game.stage_chain_best = 0;
         game.stage_deaths = 0;
+        game.stage_hurt = 0;
     } else {
         enemies_reset(0);
     }
@@ -378,6 +379,14 @@ static void clear_update(void) {
         text_put(7, 14, "LIFE BONUS", BGPAL_HUD);
         text_num(20, 14, (u32)MAX(0, player.hp) * 200u, 5, BGPAL_HUD);
         game_add_score(tbonus + game.chain_best * 100u + (u32)MAX(0, player.hp) * 200u);
+        /* ノーダメージ (ミスも被弾もなし) ならボーナス */
+        g_debug.nodamage = 0;
+        if (game.stage_hurt == 0 && game.stage_deaths == 0) {
+            text_put(7, 15, "NO DAMAGE!", BGPAL_HUD_Y);
+            text_num(20, 15, 5000, 5, BGPAL_HUD_Y);
+            game_add_score(5000);
+            g_debug.nodamage = 1;
+        }
         g_debug.clears++;
     }
     if (t == 110) {

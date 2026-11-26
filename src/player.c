@@ -221,6 +221,7 @@ void player_kill(void) {
 void player_damage(int dmg, int from_x) {
     if (player.inv || player.state == PS_DEAD || player.state == PS_CLEAR) return;
     player.hp -= dmg;
+    game.stage_hurt++;
     game.hud_dirty = 1;
     if (player.hp <= 0) {
         player_kill();

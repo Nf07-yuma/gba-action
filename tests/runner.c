@@ -62,6 +62,7 @@ typedef struct {
     uint32_t best_time;
     uint32_t combo;
     uint32_t checkpoints;
+    uint32_t nodamage;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -513,6 +514,27 @@ int main(int argc, char** argv) {
         wait_state(GS_PLAY, 400);
         read_debug(&d);
         check(d.hp == 12, "デモの後も選んでいた難易度 (EASY) が保たれる");
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
+    if (strcmp(scenario, "nodamage") == 0) {
+        /* ゴール直前へワープして被弾せずにクリア → ノーダメージボーナス */
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 0);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
+        run(30, 0);
+        wait_state(GS_PLAY, 400);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 2900);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
+        run(30, 0);
+        for (int i = 0; i < 600; i++) {
+            read_debug(&d);
+            if (d.state != GS_PLAY) break;
+            run(1, (i % 40) < 20 ? KRIGHT : (KRIGHT | KA));
+        }
+        run(80, 0);
+        read_debug(&d);
+        screenshot("nodamage_clear");
+        check(d.state == GS_CLEAR && d.nodamage == 1, "ノーダメージでクリアすると NO DAMAGE ボーナスが出る");
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }
