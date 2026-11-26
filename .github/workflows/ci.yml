@@ -63,6 +63,9 @@ jobs:
       - name: ゲームオーバー/コンティニュー テスト
         run: build/runner steel_chain.gba build/gameover-out gameover
 
+      - name: ノーダメージボーナス テスト
+        run: build/runner steel_chain.gba build/nodamage-out nodamage
+
       - name: 全曲の録音 (試聴用 WAV)
         run: build/runner steel_chain.gba build/music-out music
 
