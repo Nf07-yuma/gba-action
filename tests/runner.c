@@ -514,6 +514,36 @@ int main(int argc, char** argv) {
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }
+    if (strcmp(scenario, "gameover") == 0) {
+        /* ゲームオーバー: START でコンティニュー / 放置で 10 秒後にタイトルへ */
+        for (int k = 0; k < 2; k++) {
+            run(2, KSTART);
+            run(40, 0);
+            wait_state(GS_PLAY, 400);
+            core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 5);
+            wait_state(GS_GAMEOVER, 400);
+            read_debug(&d);
+            check(d.state == GS_GAMEOVER, "残機 0 でミスするとゲームオーバー画面になる");
+            if (k == 0) {
+                run(200, 0);
+                screenshot("gameover_countdown");
+                run(2, KSTART);
+                run(5, 0);
+                read_debug(&d);
+                check(d.state == GS_STAGE_INTRO, "START でコンティニューできる");
+                /* もう一度ゲームオーバーにする */
+                wait_state(GS_PLAY, 400);
+                core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 5);
+                wait_state(GS_GAMEOVER, 400);
+                run(30 + 60 * 10 + 5, 0);
+                read_debug(&d);
+                check(d.state == GS_TITLE, "放置するとカウントダウン後にタイトルへ戻る");
+                break;
+            }
+        }
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
     if (strstr(scenario, "easy")) {
         /* EASY を選択 (NORMAL から左) */
         run(2, KLEFT);
