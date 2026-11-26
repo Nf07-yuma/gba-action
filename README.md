@@ -52,6 +52,10 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 - **ランク評価とベストタイム**: ステージクリア時にタイム・最大 CHAIN・ミス回数・残り HP で S/A/B/C を判定。ステージ別の最高ランクとベストタイムを保存し、タイトルのステージ選択に表示
 - **爆撃ドローン**: 頭上から爆弾を落とす敵。爆弾は斬って消せる
 - **環境演出**: 鋳造所の火の粉、データハイウェイのデータ片、中枢コアの光の粒
+- **ノーダメージボーナス**: 被弾もミスもせずにステージをクリアすると +5000 点
+- **中間地点**: 柱の列を通過すると点灯 (飛び越しても OK)。画面上部に CHECKPOINT と表示
+- **コンティニュー**: ゲームオーバー後 10 秒のカウントダウン中に START で続きから
+- **ポーズ画面**: 操作のおさらいを表示
 - **CHAIN の節目演出**: 10 / 25 / 50 / 100 CHAIN でポップアップとボーナス
 - **ボス撃破演出**: とどめの一撃でヒットストップ → スローモーションで爆発
 - **難易度 3 段階**: EASY（HP12・残機5）/ NORMAL（HP8）/ HARD（HP6・敵弾が速い・回復が出にくい）
@@ -80,6 +84,9 @@ build/runner steel_chain.gba build/st4 stage4    # 指定ステージからボ�
 build/runner steel_chain.gba build/m music       # 全 BGM・効果音を WAV に録音
 build/runner steel_chain.gba build/a attract     # タイトル放置→デモプレイ
 build/runner steel_chain.gba build/e boteasy     # EASY でボット通しプレイ (bothard で HARD)
+build/runner steel_chain.gba build/g gameover    # ゲームオーバー → コンティニュー / 放置でタイトル
+build/runner steel_chain.gba build/n nodamage    # ノーダメージボーナス
+HURT_LOG=1 build/runner steel_chain.gba build/st2 stage2  # ボットの被弾位置をログ出力 (難所探し)
 ```
 
 ROM は EWRAM 先頭 (`0x02000000`) にデバッグ情報ブロック（状態・座標・HP・スコア等）を置いており、
