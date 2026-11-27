@@ -45,6 +45,12 @@ SPR_PAL_ALT[12] = (28, 10, 31)
 # ダメージ受けた時のプレイヤー (赤み)
 SPR_PAL_HURT = [(0, 0, 0)] + [(min(31, r + 10), g // 2, b // 2) for (r, g, b) in SPR_PAL[1:]]
 
+# 全データチップ収集のごほうび: 青い装甲を金色に
+SPR_PAL_GOLD = list(SPR_PAL)
+SPR_PAL_GOLD[2] = (14, 8, 1)    # b → 濃い金
+SPR_PAL_GOLD[3] = (26, 18, 3)   # B → 金
+SPR_PAL_GOLD[4] = (31, 28, 12)  # L → 明るい金
+
 # ダッシュ残像 (シアンの濃淡)
 SPR_PAL_GHOST = [(0, 0, 0)] + [(0, min(31, 6 + (r + g + b) // 5), min(31, 10 + (r + g + b) // 4)) for (r, g, b) in SPR_PAL[1:]]
 
@@ -970,7 +976,7 @@ def main():
         H.append(f"extern const u16 {name}[{len(vals)}];")
         C.append(f"const u16 {name}[{len(vals)}] = {{\n{c_u16(vals)}\n}};")
 
-    pal_block("pal_obj", [SPR_PAL, SPR_PAL_FLASH, SPR_PAL_ALT, SPR_PAL_HURT, SPR_PAL_GHOST])
+    pal_block("pal_obj", [SPR_PAL, SPR_PAL_FLASH, SPR_PAL_ALT, SPR_PAL_HURT, SPR_PAL_GHOST, SPR_PAL_GOLD])
     pal_block("pal_bg", [BG_PAL_LEVEL, BG_PAL_SKY, BG_PAL_HUD, BG_PAL_HUD_Y, BG_PAL_HUD_C, BG_PAL_LOGO])
     tv = []
     for lv, sky in THEMES:
@@ -984,7 +990,7 @@ def main():
     H.append(f"#define THEME_COUNT {len(THEMES)}")
     H.append(f"extern const u16 theme_pals[THEME_COUNT * 32];")
     C.append(f"const u16 theme_pals[THEME_COUNT * 32] = {{\n{c_u16(tv)}\n}};")
-    H += ["#define OBJPAL_NORMAL 0", "#define OBJPAL_FLASH 1", "#define OBJPAL_ALT 2", "#define OBJPAL_HURT 3", "#define OBJPAL_GHOST 4",
+    H += ["#define OBJPAL_NORMAL 0", "#define OBJPAL_FLASH 1", "#define OBJPAL_ALT 2", "#define OBJPAL_HURT 3", "#define OBJPAL_GHOST 4", "#define OBJPAL_GOLD 5",
           "#define BGPAL_LEVEL 0", "#define BGPAL_SKY 1", "#define BGPAL_HUD 2", "#define BGPAL_HUD_Y 3",
           "#define BGPAL_HUD_C 4", "#define BGPAL_LOGO 5", ""]
 

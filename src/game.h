@@ -250,6 +250,7 @@ extern u8 save_clear_diff;
 extern u8 save_chips[5]; /* ステージ別に取ったデータチップ (bit) */
 int save_chips_stage(int stage, u8 mask); /* 新しく取ったチップ数を返す */
 int chip_count(u8 mask);
+int chips_all_collected(void);
 int save_clear_difficulty(int d);
 extern u8 save_reached;
 void save_reach_stage(int stage);
@@ -296,7 +297,7 @@ typedef struct {
     s32 boss_hp;
     u32 boss_state;
     s32 boss_x;
-    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg), 3=曲再生(arg), 4=効果音(arg), 5=ゲームオーバーにする, 6=クリア済みにする, 7=スコア加算(arg) */
+    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg), 3=曲再生(arg), 4=効果音(arg), 5=ゲームオーバーにする, 6=クリア済みにする, 7=スコア加算(arg), 8=全データチップ取得済みにする */
     u32 cmd_arg;
     u32 lift_count;
     s32 lifts[8]; /* x,y x4 */
@@ -321,6 +322,7 @@ typedef struct {
     u32 bgm_mute;     /* BGM オフなら 1 */
     u32 chips;        /* このステージで取ったデータチップ (bit) | 総数 << 8 */
     u32 run_chips;    /* エンディング: 今回集めた数 | 全体の総数 << 8 */
+    u32 gold;         /* 全データチップ収集済み (自機が金色) なら 1 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

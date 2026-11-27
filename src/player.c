@@ -438,7 +438,7 @@ void player_draw(void) {
     int sx = FROM_FP(p->b.x) + PW / 2 - 16 - cam_x;
     int sy = FROM_FP(p->b.y) + PH - 31 - cam_y;
     int flip = p->dir < 0;
-    int spr, pal = OBJPAL_NORMAL;
+    int spr, pal = (!game.demo && chips_all_collected()) ? OBJPAL_GOLD : OBJPAL_NORMAL;
 
     switch (p->state) {
     case PS_HURT:
