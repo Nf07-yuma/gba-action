@@ -39,6 +39,7 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 | START | 開始 / ポーズ |
 | 十字キー左右（タイトル） | 難易度 EASY / NORMAL / HARD の切り替え |
 | 十字キー上下（タイトル） | 開始ステージの選択（一度到達したステージから） |
+| L / R（タイトル） | サウンドテスト（クリア後のおまけ。全 11 曲を試聴） |
 
 ### ゲームの特徴
 
@@ -84,6 +85,7 @@ build/runner steel_chain.gba build/boss-out boss # ボス戦へ直行してボ�
 build/runner steel_chain.gba build/st4 stage4    # 指定ステージからボットでプレイ (TRACE=<x> で x 付近の挙動をログ出力)
 build/runner steel_chain.gba build/m music       # 全 BGM・効果音を WAV に録音
 build/runner steel_chain.gba build/a attract     # タイトル放置→デモプレイ
+build/runner steel_chain.gba build/s soundtest   # クリア後のサウンドテスト (L/R で曲送り)
 build/runner steel_chain.gba build/e boteasy     # EASY でボット通しプレイ (bothard で HARD)
 build/runner steel_chain.gba build/g gameover    # ゲームオーバー → コンティニュー / 放置でタイトル
 build/runner steel_chain.gba build/n nodamage    # ノーダメージボーナス

@@ -3,6 +3,13 @@
 #include "version.h"
 
 static int title_cursor;
+static int sound_sel = -1;        /* サウンドテストで選んだ曲 (-1=未使用) */
+
+/* サウンドテストの曲名 (assets/music のファイル名順) */
+static const char* const song_names[SONG_COUNT] = {
+    "TITLE", "FACTORY", "GUARDIAN", "SKYWAY", "CORE",
+    "OVERLORD", "CLEAR", "GAME OVER", "ENDING", "FOUNDRY", "HIGHWAY",
+};
 static u8 demo_count;              /* デモの回数 (ステージを交互にする) */
 static u8 saved_easy, saved_hard;  /* デモ前に選ばれていた難易度 */
 
@@ -23,6 +30,7 @@ void title_enter(void) {
     cam_x = 0;
     cam_y = 0;
     title_cursor = 0;
+    sound_sel = -1;
     music_play(SONG_TITLE);
 }
 
@@ -86,7 +94,7 @@ void demo_input(void) {
 
 void title_update(void) {
     u32 t = game.state_t;
-    if (t > DEMO_IDLE) {
+    if (t > DEMO_IDLE && sound_sel < 0) { /* 試聴中はデモを始めない */
         demo_start();
         return;
     }
@@ -126,7 +134,29 @@ void title_update(void) {
         title_cursor = (title_cursor + (key_hit(KEY_UP) ? 1 : n - 1)) % n;
         sfx_play(SFX_SELECT);
     }
+    /* サウンドテスト (クリア後のおまけ, L/R で曲を選んで再生) */
+    if (save_cleared && key_hit(KEY_L | KEY_R)) {
+        if (sound_sel < 0) sound_sel = 0;
+        else sound_sel = (sound_sel + (key_hit(KEY_R) ? 1 : SONG_COUNT - 1)) % SONG_COUNT;
+        music_play(sound_sel);
+        game.state_t = 2; /* 試聴中はデモを始めない */
+        t = 2;
+    }
     if (t > 1) {
+        if (save_cleared) {
+            char buf[24] = "L/R SOUND TEST         ";
+            if (sound_sel >= 0) {
+                const char* nm = song_names[sound_sel];
+                buf[4] = 'B'; buf[5] = 'G'; buf[6] = 'M'; buf[7] = ' ';
+                buf[8] = (char)('0' + (sound_sel + 1) / 10);
+                buf[9] = (char)('0' + (sound_sel + 1) % 10);
+                buf[10] = ' ';
+                int i = 0;
+                for (; nm[i] && i < 12; i++) buf[11 + i] = nm[i];
+                for (; i < 12; i++) buf[11 + i] = ' ';
+            }
+            text_put(4, 14, buf, sound_sel >= 0 ? BGPAL_HUD_Y : BGPAL_HUD_C);
+        }
         text_put_center(10, game.easy ? "<  EASY   >" : game.hard ? "<  HARD   >" : "<  NORMAL >",
                         game.easy ? BGPAL_HUD_C : game.hard ? BGPAL_HUD_Y : BGPAL_HUD);
         if (save_reached > 0 || save_rank[0]) {

@@ -63,6 +63,7 @@ typedef struct {
     uint32_t combo;
     uint32_t checkpoints;
     uint32_t nodamage;
+    uint32_t song;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -483,6 +484,30 @@ int main(int argc, char** argv) {
     if (strcmp(scenario, "smoke") == 0) run(600, 0);
     check(audio_end("bgm_title") > 200.0, "タイトルで BGM が鳴っている");
 
+    if (strcmp(scenario, "soundtest") == 0) {
+        /* クリア後のおまけ: タイトルで L/R を押すと曲を選んで試聴できる */
+        run(4, KR);
+        run(10, 0);
+        read_debug(&d);
+        check(d.song == 0, "未クリアでは L/R を押してもタイトル曲のまま");
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 6);
+        run(10, 0);
+        for (int i = 0; i < 3; i++) { run(2, KR); run(6, 0); }
+        read_debug(&d);
+        screenshot("soundtest");
+        check(d.song == 2, "クリア後は R で曲を送れる (3 回押して 3 曲目)");
+        run(2, KL); run(6, 0);
+        read_debug(&d);
+        check(d.song == 1, "L で 1 曲戻る");
+        run(2, KL); run(6, 0); run(2, KL); run(6, 0);
+        read_debug(&d);
+        check(d.song == 10, "先頭から L で最後の曲へ折り返す");
+        run(1400, 0);
+        read_debug(&d);
+        check(d.state == GS_TITLE && d.song == 10, "試聴中はデモプレイが始まらない");
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
     if (strcmp(scenario, "attract") == 0) {
         /* タイトル放置でデモプレイが始まり、ボタンでタイトルに戻る (EASY を選んでおく) */
         run(2, KLEFT);
