@@ -243,6 +243,8 @@ void ending_update(void);
 extern u32 save_hiscore;
 extern u16 save_best_chain;
 extern u8 save_cleared;
+extern u8 save_clear_diff;
+int save_clear_difficulty(int d);
 extern u8 save_reached;
 void save_reach_stage(int stage);
 extern u8 save_rank[5];
