@@ -66,6 +66,9 @@ jobs:
       - name: スコアエクステンド テスト
         run: build/runner steel_chain.gba build/extend-out extend
 
+      - name: ポーズメニューの BGM オン/オフ テスト
+        run: build/runner steel_chain.gba build/pausebgm-out pausebgm
+
       - name: ゲームオーバー/コンティニュー テスト
         run: build/runner steel_chain.gba build/gameover-out gameover
 

@@ -294,23 +294,29 @@ static void world_step(void) {
 
 static int pause_cursor;
 static void pause_menu_draw(void) {
-    static const char* items[3] = {"RESUME", "RETRY STAGE", "QUIT TO TITLE"};
-    text_fill(8, 6, 14, 9, HUD_TILE_SOLID_DARK, BGPAL_HUD);
+    static const char* items[4] = {"RESUME", "RETRY STAGE", "QUIT TO TITLE", 0};
+    text_fill(8, 6, 14, 10, HUD_TILE_SOLID_DARK, BGPAL_HUD);
     text_put_center(7, "- PAUSE -", BGPAL_HUD_Y);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
+        if (!items[i]) {
+            text_put(11, 9 + i * 2, bgm_mute ? "BGM  OFF" : "BGM  ON ", i == pause_cursor ? BGPAL_HUD_C : BGPAL_HUD);
+            if (i == pause_cursor) text_put(9, 9 + i * 2, ">", BGPAL_HUD_Y);
+            else text_fill(9, 9 + i * 2, 1, 1, HUD_TILE_SOLID_DARK, BGPAL_HUD);
+            continue;
+        }
         if (i == pause_cursor) text_put(9, 9 + i * 2, ">", BGPAL_HUD_Y);
         else text_fill(9, 9 + i * 2, 1, 1, HUD_TILE_SOLID_DARK, BGPAL_HUD);
         text_put(11, 9 + i * 2, items[i], i == pause_cursor ? BGPAL_HUD_C : BGPAL_HUD);
     }
     bg_dim = 10; /* 背景を暗くして文字を読みやすく */
     /* 操作のおさらい */
-    text_put_center(16, "B SLASH  A JUMP  R DASH", BGPAL_HUD_C);
-    text_put_center(17, "HOLD B: CHARGE SLASH", BGPAL_HUD);
-    text_put_center(18, "DASH + B: DASH SLASH", BGPAL_HUD);
+    text_put_center(17, "B SLASH  A JUMP  R DASH", BGPAL_HUD_C);
+    text_put_center(18, "HOLD B: CHARGE SLASH", BGPAL_HUD);
+    text_put_center(19, "DASH + B: DASH SLASH", BGPAL_HUD);
 }
 
 static void pause_menu_clear(void) {
-    for (int y = 6; y < 19; y++) text_put(0, y, "                              ", BGPAL_HUD);
+    for (int y = 6; y < 20; y++) text_put(0, y, "                              ", BGPAL_HUD);
     bg_dim = 0;
 }
 
@@ -333,11 +339,18 @@ static void play_update(void) {
 static void pause_update(void) {
     draw_world();
     if (key_hit(KEY_UP | KEY_DOWN)) {
-        pause_cursor = (pause_cursor + (key_hit(KEY_DOWN) ? 1 : 2)) % 3;
+        pause_cursor = (pause_cursor + (key_hit(KEY_DOWN) ? 1 : 3)) % 4;
         sfx_play(SFX_SELECT);
         pause_menu_draw();
     }
     if (key_hit(KEY_START) && pause_cursor != 0) pause_cursor = 0; /* START は常に再開 */
+    if (pause_cursor == 3 && key_hit(KEY_A | KEY_LEFT | KEY_RIGHT)) {
+        /* BGM のオン/オフ (ポーズ中はそのまま) */
+        music_set_mute(!bgm_mute);
+        sfx_play(SFX_SELECT);
+        pause_menu_draw();
+        return;
+    }
     if (key_hit(KEY_START | KEY_A)) {
         pause_menu_clear();
         sfx_play(SFX_SELECT);
@@ -481,6 +494,7 @@ static void gameover_update(void) {
 static void debug_publish(void) {
     g_debug.frame = game.frame;
     g_debug.song = (u32)(music_current() & 0xFF);
+    g_debug.bgm_mute = bgm_mute;
     g_debug.state = game.state;
     g_debug.stage = game.stage;
     g_debug.px = FROM_FP(player.b.x);
