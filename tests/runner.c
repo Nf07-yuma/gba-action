@@ -69,6 +69,7 @@ typedef struct {
     uint32_t bgm_mute;
     uint32_t chips;
     uint32_t run_chips;
+    uint32_t gold;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -667,12 +668,26 @@ int main(int argc, char** argv) {
         uint32_t st0 = core->busRead8(core, 0x0E000044);
         printf("  SRAM: chip magic=%08X stage1=%u\n", magic, st0);
         check(magic == 0x314B5453u && st0 == 1, "取ったデータチップがクリア時に SRAM に記録される");
+        check(d.gold == 0, "全部集めるまでは自機は通常の色");
         /* リセット後のタイトルのステージ欄に CHIP 1/3 */
         core->reset(core);
         run(120, 0);
         screenshot("chips_title");
         read_debug(&d);
         check(d.state == GS_TITLE, "リセット後タイトルに戻る (ステージ欄に CHIP 1/3)");
+        /* 全データチップを集めると自機が金色になる (リセット後も保持) */
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 8);
+        run(10, 0);
+        core->reset(core);
+        run(120, 0);
+        read_debug(&d);
+        screenshot("chips_gold_title");
+        check(d.gold == 1, "全データチップを集めると自機が金色になる (リセット後も保持)");
+        run(2, KSTART);
+        run(40, 0);
+        wait_state(GS_PLAY, 400);
+        run(30, 0);
+        screenshot("chips_gold_play");
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }

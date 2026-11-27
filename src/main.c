@@ -517,6 +517,7 @@ static void debug_publish(void) {
     g_debug.frame = game.frame;
     g_debug.song = (u32)(music_current() & 0xFF);
     g_debug.bgm_mute = bgm_mute;
+    g_debug.gold = (u32)chips_all_collected();
     g_debug.chips = game.stage_chips | ((u32)game.stage_chip_total << 8);
     g_debug.state = game.state;
     g_debug.stage = game.stage;
@@ -612,6 +613,14 @@ int main(void) {
         } else if (g_debug.cmd == 7 && game.state == GS_PLAY) {
             /* テスト用: スコア加算 (エクステンドの確認) */
             game_add_score(g_debug.cmd_arg);
+            g_debug.cmd = 0;
+        } else if (g_debug.cmd == 8) {
+            /* テスト用: 全ステージのデータチップを取ったことにする (SRAM にも記録) */
+            for (int s = 0; s < LEVEL_COUNT && s < 5; s++) {
+                int total = 0;
+                for (int i = 0; i < levels[s].nobjs; i++) total += levels[s].objs[i].type == OBJ_CHIP;
+                save_chips_stage(s, (u8)((1 << total) - 1));
+            }
             g_debug.cmd = 0;
         } else if (g_debug.cmd == 6) {
             /* テスト用: クリア済みにする (セーブはしない)。タイトルを描き直す */

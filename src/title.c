@@ -197,7 +197,7 @@ void title_update(void) {
         text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);
     }
     oam_begin();
-    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 14, 74, 0, OBJPAL_NORMAL, 0);
+    oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 14, 74, 0, chips_all_collected() ? OBJPAL_GOLD : OBJPAL_NORMAL, 0);
     oam_put(SPR_PLAYER_IDLE0 + ((t >> 5) & 1), 194, 74, 1, OBJPAL_GHOST, 0);
     if (t > 20 && key_hit(KEY_START | KEY_A)) {
         sfx_play(SFX_SELECT);

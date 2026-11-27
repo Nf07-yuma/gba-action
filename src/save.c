@@ -20,6 +20,20 @@ u8 save_chips[5];      /* ステージ別に取ったデータチップ (bit) */
 #define CHIP_OFF 64
 #define CHIP_MAGIC 0x314B5453u
 
+/* 全ステージのデータチップを集め終えたか (自機が金色になる) */
+static s8 all_chips_cache = -1; /* -1 = 再計算が必要 */
+int chips_all_collected(void) {
+    if (all_chips_cache >= 0) return all_chips_cache;
+    all_chips_cache = 0;
+    for (int s = 0; s < LEVEL_COUNT && s < 5; s++) {
+        int total = 0;
+        for (int i = 0; i < levels[s].nobjs; i++) total += levels[s].objs[i].type == OBJ_CHIP;
+        if (chip_count(save_chips[s]) < total) return 0;
+    }
+    all_chips_cache = 1;
+    return 1;
+}
+
 int chip_count(u8 mask) {
     int n = 0;
     for (int i = 0; i < 8; i++) n += (mask >> i) & 1;
@@ -46,6 +60,7 @@ void save_load(void) {
     for (int i = 0; i < 5; i++) save_rank[i] = 0;
     for (int i = 0; i < 5; i++) save_best_time[i] = 0;
     for (int i = 0; i < 5; i++) save_chips[i] = 0;
+    all_chips_cache = -1;
     if (rd32(CHIP_OFF) == CHIP_MAGIC) {
         u8 sum = 0x5A, ch[5];
         for (int i = 0; i < 5; i++) sum ^= ch[i] = SRAM[CHIP_OFF + 4 + i];
@@ -125,6 +140,7 @@ int save_chips_stage(int stage, u8 mask) {
     u8 add = (u8)(mask & ~save_chips[stage]);
     if (!add) return 0;
     save_chips[stage] |= add;
+    all_chips_cache = -1;
     u8 sum = 0x5A;
     for (int i = 0; i < 5; i++) {
         SRAM[CHIP_OFF + 4 + i] = save_chips[i];
