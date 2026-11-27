@@ -347,6 +347,7 @@ static void pause_update(void) {
     if (pause_cursor == 3 && key_hit(KEY_A | KEY_LEFT | KEY_RIGHT)) {
         /* BGM のオン/オフ (ポーズ中はそのまま) */
         music_set_mute(!bgm_mute);
+        save_settings();
         sfx_play(SFX_SELECT);
         pause_menu_draw();
         return;
