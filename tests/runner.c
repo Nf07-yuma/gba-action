@@ -67,6 +67,7 @@ typedef struct {
     uint32_t extends;
     uint32_t intro_best;
     uint32_t bgm_mute;
+    uint32_t chips;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -628,6 +629,45 @@ int main(int argc, char** argv) {
         wait_state(GS_PLAY, 400);
         read_debug(&d);
         check(d.hp == hp_sel, "リセット後も前回選んだ難易度で始まる");
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
+    if (strcmp(scenario, "chips") == 0) {
+        /* データチップ: ステージ1 の最初のチップ (地面の上) を取り、クリアで SRAM に記録 */
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 0);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
+        run(30, 0);
+        wait_state(GS_PLAY, 400);
+        read_debug(&d);
+        printf("  データチップ: %u 個 (ステージ1)\n", d.chips >> 8);
+        check((d.chips >> 8) == 3, "ステージ1 にデータチップが 3 個ある");
+        for (int i = 0; i < 120 && !(d.chips & 1); i++) { run(1, KRIGHT); read_debug(&d); }
+        run(4, 0);
+        screenshot("chips_get");
+        read_debug(&d);
+        check((d.chips & 0xFF) == 1, "歩いて最初のデータチップを取れる");
+        /* ゴール前へワープしてクリア */
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 2900);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
+        run(30, 0);
+        for (int i = 0; i < 600; i++) {
+            read_debug(&d);
+            if (d.state != GS_PLAY) break;
+            run(1, (i % 40) < 20 ? KRIGHT : (KRIGHT | KA));
+        }
+        run(80, 0);
+        screenshot("chips_clear");
+        uint32_t magic = 0;
+        for (int i = 0; i < 4; i++) magic |= (uint32_t)core->busRead8(core, 0x0E000040 + i) << (i * 8);
+        uint32_t st0 = core->busRead8(core, 0x0E000044);
+        printf("  SRAM: chip magic=%08X stage1=%u\n", magic, st0);
+        check(magic == 0x314B5453u && st0 == 1, "取ったデータチップがクリア時に SRAM に記録される");
+        /* リセット後のタイトルのステージ欄に CHIP 1/3 */
+        core->reset(core);
+        run(120, 0);
+        screenshot("chips_title");
+        read_debug(&d);
+        check(d.state == GS_TITLE, "リセット後タイトルに戻る (ステージ欄に CHIP 1/3)");
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }

@@ -201,6 +201,26 @@ khhkkGGGGGgk....
 .kWWWWk.
 ..kkkk..
 
+@chip0 8 8
+.kkkkkk.
+kCyCCyCk
+kyccccyk
+kCcWWcCk
+kCcWWcCk
+kyccccyk
+kCyCCyCk
+.kkkkkk.
+
+@chip1 8 8
+.kkkkkk.
+kWyWWyWk
+kyCCCCyk
+kWCccCWk
+kWCccCWk
+kyCCCCyk
+kWyWWyWk
+.kkkkkk.
+
 @checkpoint0 16 16
 ......kkkk......
 .....kRRRRk.....

@@ -167,6 +167,10 @@ static void stage_begin(int respawn) {
         game.checkpoint_y = (level.def->spawn_y + 1) * CELL;
         stage_start_score = game.score;
         bg_dim = 0;
+        game.stage_chips = 0;
+        game.stage_chip_total = 0;
+        for (int i = 0; i < level.def->nobjs; i++)
+            if (level.def->objs[i].type == OBJ_CHIP) game.stage_chip_total++;
         game.stage_time = 0;
         game.stage_chain_best = 0;
         game.stage_deaths = 0;
@@ -426,6 +430,14 @@ static void clear_update(void) {
             game_add_score(5000);
             g_debug.nodamage = 1;
         }
+        /* データチップ (このプレイで取った数 / ステージの総数) */
+        if (game.stage_chip_total) {
+            char buf[20] = "DATA CHIP   0/0";
+            buf[12] = (char)('0' + chip_count(game.stage_chips));
+            buf[14] = (char)('0' + game.stage_chip_total);
+            text_put(7, 18, buf, game.stage_chips ? BGPAL_HUD_C : BGPAL_HUD);
+            if (!game.demo && save_chips_stage(game.stage, game.stage_chips)) text_put(23, 18, "NEW!", BGPAL_HUD_Y);
+        }
         g_debug.clears++;
     }
     if (t == 110) {
@@ -496,6 +508,7 @@ static void debug_publish(void) {
     g_debug.frame = game.frame;
     g_debug.song = (u32)(music_current() & 0xFF);
     g_debug.bgm_mute = bgm_mute;
+    g_debug.chips = game.stage_chips | ((u32)game.stage_chip_total << 8);
     g_debug.state = game.state;
     g_debug.stage = game.stage;
     g_debug.px = FROM_FP(player.b.x);

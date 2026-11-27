@@ -197,6 +197,8 @@ typedef struct {
     s8 lives;
     u32 score;
     u32 next_extend; /* 次に残機が増えるスコア */
+    u8 stage_chips;      /* このステージで取ったデータチップ (bit) */
+    u8 stage_chip_total; /* このステージのデータチップの数 */
     u16 chain;
     u16 chain_t;
     u16 chain_best;
@@ -244,6 +246,9 @@ extern u32 save_hiscore;
 extern u16 save_best_chain;
 extern u8 save_cleared;
 extern u8 save_clear_diff;
+extern u8 save_chips[5]; /* ステージ別に取ったデータチップ (bit) */
+int save_chips_stage(int stage, u8 mask); /* 新しく取ったチップ数を返す */
+int chip_count(u8 mask);
 int save_clear_difficulty(int d);
 extern u8 save_reached;
 void save_reach_stage(int stage);
@@ -313,6 +318,7 @@ typedef struct {
     u32 extends;      /* スコアで残機が増えた回数 */
     u32 intro_best;   /* ステージ紹介に自己ベストを表示したら 1 */
     u32 bgm_mute;     /* BGM オフなら 1 */
+    u32 chips;        /* このステージで取ったデータチップ (bit) | 総数 << 8 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

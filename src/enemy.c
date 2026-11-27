@@ -73,6 +73,7 @@ static void ent_init(Ent* e, int type, int px, int py) {
     case OBJ_CHECKPOINT: w = 8; h = 16; break;
     case OBJ_GOAL:    w = 18; h = 30; break;
     case OBJ_HEAL:    w = 8; h = 8; break;
+    case OBJ_CHIP:    w = 10; h = 10; break;
     case OBJ_LIFT_H:
     case OBJ_LIFT_V:  w = 32; h = 6; break;
     }
@@ -116,6 +117,11 @@ void enemies_spawn_check(void) {
         if (o->x > r) break;
         if (obj_flag[i] & (OF_SPAWNED | OF_DEAD)) continue;
         if (o->type != OBJ_LIFT_H && o->type != OBJ_LIFT_V && (o->x < el || o->x > er)) continue;
+        /* このプレイで取ったデータチップは再出現しない */
+        if (o->type == OBJ_CHIP && (game.stage_chips >> o->param) & 1) {
+            obj_flag[i] |= OF_DEAD;
+            continue;
+        }
         if (o->type == OBJ_BOSS) {
             if (boss_check_start(o->x, o->y, o->param)) obj_flag[i] |= OF_SPAWNED;
             continue;
@@ -495,6 +501,23 @@ static void update_prop(Ent* e) {
                 game_stage_clear();
         }
         break;
+    case OBJ_CHIP:
+        /* 浮いている収集アイテム: 触れると取得 */
+        if (body_overlap(&e->b, &player.b) && player.state != PS_DEAD) {
+            game.stage_chips |= (u8)(1 << e->phase);
+            int n = 0;
+            for (int k = 0; k < 8; k++) n += (game.stage_chips >> k) & 1;
+            char msg[16] = "DATA CHIP 0/0";
+            msg[10] = (char)('0' + n);
+            msg[12] = (char)('0' + game.stage_chip_total);
+            game_popup(msg);
+            game_add_score(1000);
+            sfx_play(SFX_CHECK);
+            fx_spawn(FX_SPARK, px_center(e) - 4, py_center(e) - 4, 0);
+            ent_free(e, 1);
+            return;
+        }
+        break;
     case OBJ_HEAL:
         e->b.vy += 0x40;
         if (e->b.vy > 0x400) e->b.vy = 0x400;
@@ -663,6 +686,9 @@ void enemies_draw(void) {
         case OBJ_LIFT_H:
         case OBJ_LIFT_V:
             oam_put(SPR_LIFT0 + ((e->t >> 3) & 1), FROM_FP(e->b.x) - cam_x, FROM_FP(e->b.y) - cam_y, 0, OBJPAL_NORMAL, 2);
+            break;
+        case OBJ_CHIP:
+            oam_put(SPR_CHIP0 + ((e->t >> 3) & 1), cx - 4, bot - 9 - ((e->t >> 4) & 1), 0, OBJPAL_NORMAL, 1);
             break;
         case OBJ_HEAL:
             if (e->obj < 0 && e->t > 480 && (e->t & 4)) break;
