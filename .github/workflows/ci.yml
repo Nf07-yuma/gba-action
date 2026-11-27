@@ -69,6 +69,9 @@ jobs:
       - name: ポーズメニューの BGM オン/オフ テスト
         run: build/runner steel_chain.gba build/pausebgm-out pausebgm
 
+      - name: 設定 (BGM・難易度) の保存テスト
+        run: build/runner steel_chain.gba build/settings-out settings
+
       - name: ゲームオーバー/コンティニュー テスト
         run: build/runner steel_chain.gba build/gameover-out gameover
 

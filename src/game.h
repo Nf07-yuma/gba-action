@@ -250,6 +250,7 @@ int save_rank_stage(int stage, int rank);
 extern u16 save_best_time[5];
 int save_time_stage(int stage, u32 frames);
 void save_load(void);
+void save_settings(void); /* BGM オン/オフ・難易度を保存 */
 int save_record(u32 score, u16 chain, int cleared);
 
 /* ---- sound.c ---- */

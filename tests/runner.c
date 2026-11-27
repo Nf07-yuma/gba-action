@@ -605,6 +605,32 @@ int main(int argc, char** argv) {
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }
+    if (strcmp(scenario, "settings") == 0) {
+        /* 設定の保存: HARD を選んで開始し BGM をオフ → リセット後も残っている */
+        run(2, KRIGHT); run(6, 0); /* NORMAL → HARD */
+        run(2, KSTART);
+        run(40, 0);
+        wait_state(GS_PLAY, 400);
+        read_debug(&d);
+        int hp_sel = d.hp;
+        check(hp_sel == 6, "HARD (HP 6) で始まる");
+        run(2, KSTART); run(6, 0);
+        run(2, KUP); run(4, 0);
+        run(2, KA); run(6, 0);
+        read_debug(&d);
+        check(d.bgm_mute == 1, "ポーズで BGM をオフにした");
+        core->reset(core);
+        run(120, 0);
+        read_debug(&d);
+        check(d.state == GS_TITLE && d.bgm_mute == 1, "リセット後も BGM オフが保たれる");
+        run(2, KSTART);
+        run(40, 0);
+        wait_state(GS_PLAY, 400);
+        read_debug(&d);
+        check(d.hp == hp_sel, "リセット後も前回選んだ難易度で始まる");
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
     if (strcmp(scenario, "nodamage") == 0) {
         /* ゴール直前へワープして被弾せずにクリア → ノーダメージボーナス */
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 0);

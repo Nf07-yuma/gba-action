@@ -48,12 +48,18 @@ void save_load(void) {
     save_hiscore = hs;
     save_best_chain = (u16)ch;
     save_cleared = (u8)(cl & 1);
+    /* bit1: BGM オフ, bit2-3: 難易度 (0=NORMAL 1=EASY 2=HARD) */
+    bgm_mute = (u8)((cl >> 1) & 1);
+    game.easy = (u8)(((cl >> 2) & 3) == 1);
+    game.hard = (u8)(((cl >> 2) & 3) == 2);
     save_reached = (u8)MIN(4u, (cl >> 8) & 0xFF);
     for (int i = 0; i < 5; i++) save_rank[i] = (u8)MIN(4u, (cl >> (16 + i * 3)) & 7);
 }
 
 static void save_write(void) {
     u32 ch = save_best_chain, cl = save_cleared | ((u32)save_reached << 8);
+    cl |= (u32)(bgm_mute & 1) << 1;
+    cl |= (u32)(game.easy ? 1 : game.hard ? 2 : 0) << 2;
     /* bit16- : ステージ別ランク (3bit x 5) */
     for (int i = 0; i < 5; i++) cl |= (u32)save_rank[i] << (16 + i * 3);
     wr32(4, save_hiscore);
@@ -80,6 +86,11 @@ int save_record(u32 score, u16 chain, int cleared) {
     }
     if (upd) save_write();
     return upd;
+}
+
+/* 設定 (BGM オン/オフ・難易度) を保存 */
+void save_settings(void) {
+    save_write();
 }
 
 /* ステージ到達を記録 (ステージセレクト用) */
