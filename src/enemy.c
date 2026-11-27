@@ -502,7 +502,8 @@ static void update_prop(Ent* e) {
         }
         break;
     case OBJ_CHIP:
-        /* 浮いている収集アイテム: 触れると取得 */
+        /* 浮いている収集アイテム: ときどき光って存在を知らせる。触れると取得 */
+        if ((e->t % 48) == 0) fx_spawn(FX_SPARK, px_center(e) - 4 + rng_range(9) - 4, py_center(e) - 8 + rng_range(5), 0);
         if (body_overlap(&e->b, &player.b) && player.state != PS_DEAD) {
             game.stage_chips |= (u8)(1 << e->phase);
             int n = 0;
