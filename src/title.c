@@ -205,6 +205,7 @@ void title_update(void) {
         game.lives = START_LIVES;
         game.score = 0;
         game.next_extend = EXTEND_FIRST;
+        game.run_chips = 0;
         save_settings(); /* 選んだ難易度を覚えておく */
         game.kills = 0;
         game.deaths = 0;

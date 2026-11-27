@@ -199,6 +199,7 @@ typedef struct {
     u32 next_extend; /* 次に残機が増えるスコア */
     u8 stage_chips;      /* このステージで取ったデータチップ (bit) */
     u8 stage_chip_total; /* このステージのデータチップの数 */
+    u8 run_chips;        /* 今回のプレイで集めたデータチップの合計 */
     u16 chain;
     u16 chain_t;
     u16 chain_best;
@@ -319,6 +320,7 @@ typedef struct {
     u32 intro_best;   /* ステージ紹介に自己ベストを表示したら 1 */
     u32 bgm_mute;     /* BGM オフなら 1 */
     u32 chips;        /* このステージで取ったデータチップ (bit) | 総数 << 8 */
+    u32 run_chips;    /* エンディング: 今回集めた数 | 全体の総数 << 8 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

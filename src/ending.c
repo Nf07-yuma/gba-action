@@ -92,6 +92,17 @@ void ending_update(void) {
         text_num(21, 10, game.deaths, 3, BGPAL_HUD);
         text_put(6, 11, "TOTAL TIME", BGPAL_HUD_C);
         text_time(19, 11, game.total_time, BGPAL_HUD);
+        {
+            /* 今回集めたデータチップ / 全ステージの総数 */
+            int total = 0;
+            for (int s = 0; s < LEVEL_COUNT; s++)
+                for (int i = 0; i < levels[s].nobjs; i++) total += levels[s].objs[i].type == OBJ_CHIP;
+            text_put(6, 12, "DATA CHIPS", BGPAL_HUD_C);
+            text_num(18, 12, game.run_chips, 2, game.run_chips >= total ? BGPAL_HUD_Y : BGPAL_HUD);
+            text_put(20, 12, "/", BGPAL_HUD);
+            text_num(21, 12, (u32)total, 2, BGPAL_HUD);
+            g_debug.run_chips = game.run_chips | ((u32)total << 8);
+        }
         text_put(6, 13, "DIFFICULTY", BGPAL_HUD_C);
         text_put(18, 13, diff == 0 ? "  EASY" : diff == 2 ? "  HARD" : "NORMAL", diff == 2 ? BGPAL_HUD_Y : BGPAL_HUD);
         /* ステージ別ランク (今回のプレイ) */

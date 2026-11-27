@@ -437,6 +437,7 @@ static void clear_update(void) {
             buf[14] = (char)('0' + game.stage_chip_total);
             text_put(7, 18, buf, game.stage_chips ? BGPAL_HUD_C : BGPAL_HUD);
             if (!game.demo && save_chips_stage(game.stage, game.stage_chips)) text_put(23, 18, "NEW!", BGPAL_HUD_Y);
+            game.run_chips = (u8)(game.run_chips + chip_count(game.stage_chips));
         }
         g_debug.clears++;
     }

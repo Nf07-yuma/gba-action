@@ -68,6 +68,7 @@ typedef struct {
     uint32_t intro_best;
     uint32_t bgm_mute;
     uint32_t chips;
+    uint32_t run_chips;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -1061,6 +1062,9 @@ int main(int argc, char** argv) {
             uint32_t clw = core->busRead8(core, 0x0E00000C);
             printf("  SRAM: クリアした難易度 bits=%u\n", (clw >> 4) & 7);
             check(((clw >> 4) & 7) == 2, "クリアした難易度 (NORMAL) が SRAM に記録される");
+            read_debug(&d);
+            printf("  データチップ: %u / %u\n", d.run_chips & 0xFF, d.run_chips >> 8);
+            check((d.run_chips >> 8) == 15, "エンディングにデータチップの総数 (15) が出る");
             /* スタッフロール: START で開始 → A 長押しで早送り → THE END → START でタイトル */
             run(130, 0);
             run(2, KSTART);
