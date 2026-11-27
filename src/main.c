@@ -313,6 +313,13 @@ static void pause_menu_draw(void) {
         text_put(11, 9 + i * 2, items[i], i == pause_cursor ? BGPAL_HUD_C : BGPAL_HUD);
     }
     bg_dim = 10; /* 背景を暗くして文字を読みやすく */
+    /* このステージで取ったデータチップ */
+    if (game.stage_chip_total) {
+        char cb[16] = "DATA CHIP 0/0";
+        cb[10] = (char)('0' + chip_count(game.stage_chips));
+        cb[12] = (char)('0' + game.stage_chip_total);
+        text_put_center(16, cb, chip_count(game.stage_chips) >= game.stage_chip_total ? BGPAL_HUD_Y : BGPAL_HUD_C);
+    }
     /* 操作のおさらい */
     text_put_center(17, "B SLASH  A JUMP  R DASH", BGPAL_HUD_C);
     text_put_center(18, "HOLD B: CHARGE SLASH", BGPAL_HUD);
@@ -342,6 +349,7 @@ static void play_update(void) {
 
 static void pause_update(void) {
     draw_world();
+    oam_begin(); /* ポーズ中はスプライトを消してメニューを読みやすく */
     if (key_hit(KEY_UP | KEY_DOWN)) {
         pause_cursor = (pause_cursor + (key_hit(KEY_DOWN) ? 1 : 3)) % 4;
         sfx_play(SFX_SELECT);

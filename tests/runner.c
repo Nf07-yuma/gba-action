@@ -647,6 +647,10 @@ int main(int argc, char** argv) {
         screenshot("chips_get");
         read_debug(&d);
         check((d.chips & 0xFF) == 1, "歩いて最初のデータチップを取れる");
+        /* ポーズ画面にも DATA CHIP 1/3 が出る (撮影して目視確認) */
+        run(2, KSTART); run(10, 0);
+        screenshot("chips_pause");
+        run(2, KSTART); run(10, 0);
         /* ゴール前へワープしてクリア */
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 2900);
         core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 2);
