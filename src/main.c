@@ -81,9 +81,22 @@ void hud_draw(int force) {
 }
 
 /* ---------------------------------------------------------- ゲーム API */
+u32 extend_after(u32 score) {
+    if (score < EXTEND_FIRST) return EXTEND_FIRST;
+    return EXTEND_FIRST + EXTEND_EVERY * ((score - EXTEND_FIRST) / EXTEND_EVERY + 1);
+}
+
 void game_add_score(u32 pts) {
     game.score += pts;
     if (game.score > 9999999) game.score = 9999999;
+    /* スコアエクステンド (20000 点, 以降 40000 点ごとに残機 +1) */
+    while (!game.demo && game.next_extend && game.score >= game.next_extend) {
+        game.next_extend += EXTEND_EVERY;
+        if (game.lives < 9) game.lives++;
+        game_popup("1UP!");
+        sfx_play(SFX_PICKUP);
+        g_debug.extends++;
+    }
 }
 
 void game_add_chain(int hits) {
@@ -444,6 +457,7 @@ static void gameover_update(void) {
     if (game.state_t > 30 && key_hit(KEY_START | KEY_A)) {
         game.lives = START_LIVES;
         game.score = stage_start_score / 2;
+        game.next_extend = extend_after(game.score);
         game_set_state(GS_STAGE_INTRO);
     } else if (game.state_t > 30 && key_hit(KEY_SELECT)) {
         title_enter();
@@ -545,6 +559,10 @@ int main(void) {
             /* テスト用: 残機 0 にしてミス (ゲームオーバー画面へ) */
             game.lives = 0;
             player_kill();
+            g_debug.cmd = 0;
+        } else if (g_debug.cmd == 7 && game.state == GS_PLAY) {
+            /* テスト用: スコア加算 (エクステンドの確認) */
+            game_add_score(g_debug.cmd_arg);
             g_debug.cmd = 0;
         } else if (g_debug.cmd == 6) {
             /* テスト用: クリア済みにする (セーブはしない)。タイトルを描き直す */

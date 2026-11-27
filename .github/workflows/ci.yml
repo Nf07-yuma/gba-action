@@ -63,6 +63,9 @@ jobs:
       - name: サウンドテスト (クリア後のおまけ) テスト
         run: build/runner steel_chain.gba build/soundtest-out soundtest
 
+      - name: スコアエクステンド テスト
+        run: build/runner steel_chain.gba build/extend-out extend
+
       - name: ゲームオーバー/コンティニュー テスト
         run: build/runner steel_chain.gba build/gameover-out gameover
 

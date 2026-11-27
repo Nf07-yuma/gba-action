@@ -196,6 +196,7 @@ typedef struct {
     u8 stage;
     s8 lives;
     u32 score;
+    u32 next_extend; /* 次に残機が増えるスコア */
     u16 chain;
     u16 chain_t;
     u16 chain_best;
@@ -218,6 +219,9 @@ typedef struct {
     u32 total_time; /* 全体の経過フレーム */
 } Game;
 #define START_LIVES (game.easy ? 5 : 3)
+#define EXTEND_FIRST 20000u  /* 最初のエクステンド */
+#define EXTEND_EVERY 40000u  /* 以降の間隔 */
+u32 extend_after(u32 score); /* score より上の次のエクステンド点 */
 extern Game game;
 void game_add_chain(int hits);
 void game_add_score(u32 pts);
@@ -281,7 +285,7 @@ typedef struct {
     s32 boss_hp;
     u32 boss_state;
     s32 boss_x;
-    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg), 3=曲再生(arg), 4=効果音(arg), 5=ゲームオーバーにする, 6=クリア済みにする */
+    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg), 3=曲再生(arg), 4=効果音(arg), 5=ゲームオーバーにする, 6=クリア済みにする, 7=スコア加算(arg) */
     u32 cmd_arg;
     u32 lift_count;
     s32 lifts[8]; /* x,y x4 */
@@ -301,6 +305,7 @@ typedef struct {
     u32 checkpoints;  /* 通過した中間地点の数 */
     u32 nodamage;     /* 直近のクリアがノーダメージなら 1 */
     u32 song;         /* 再生中の曲番号 (0xFF=停止) */
+    u32 extends;      /* スコアで残機が増えた回数 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

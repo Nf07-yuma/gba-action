@@ -64,6 +64,7 @@ typedef struct {
     uint32_t checkpoints;
     uint32_t nodamage;
     uint32_t song;
+    uint32_t extends;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -539,6 +540,32 @@ int main(int argc, char** argv) {
         wait_state(GS_PLAY, 400);
         read_debug(&d);
         check(d.hp == 12, "デモの後も選んでいた難易度 (EASY) が保たれる");
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
+    if (strcmp(scenario, "extend") == 0) {
+        /* スコアエクステンド: 20000 点で残機 +1, 以降 40000 点ごと */
+        run(2, KSTART);
+        run(40, 0);
+        wait_state(GS_PLAY, 400);
+        read_debug(&d);
+        int lives0 = d.lives;
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 20000);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 7);
+        run(20, 0);
+        read_debug(&d);
+        screenshot("extend_1up");
+        check(d.lives == lives0 + 1 && d.extends == 1, "20000 点で残機が 1 増える (1UP)");
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 35000);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 7);
+        run(10, 0);
+        read_debug(&d);
+        check(d.lives == lives0 + 1, "次のエクステンド (60000 点) までは増えない");
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 5000);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 7);
+        run(10, 0);
+        read_debug(&d);
+        check(d.lives == lives0 + 2 && d.extends == 2, "60000 点で 2 回目のエクステンド");
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }
