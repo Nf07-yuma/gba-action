@@ -53,7 +53,7 @@ void sfx_play(int id) {
     case SFX_LASER:  noise(0xA400, 0x0005); sq1(0x0000, 0xC3C0, 1250); noise_busy = 20; break; /* レーザー照射 */
     case SFX_ALARM:  sq1(0x0000, 0x7180, 2010); break;                       /* 警告ピッ */
     case SFX_LOWHP:  sq1(0x0000, 0x6180, 1880); break;                       /* HP 残りわずかの警告 (控えめ) */
-    case SFX_GUARD:  noise(0x9100, 0x0001); sq1(0x0000, 0x9140, 1990); noise_busy = 6; break; /* 金属で弾かれる */
+    case SFX_GUARD:  noise(0x9100, 0x0001); sq1(0x0000, 0x9180, 1990); noise_busy = 6; break; /* 金属で弾かれる */
     }
 }
 
