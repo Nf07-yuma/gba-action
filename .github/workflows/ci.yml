@@ -72,6 +72,9 @@ jobs:
       - name: 設定 (BGM・難易度) の保存テスト
         run: build/runner steel_chain.gba build/settings-out settings
 
+      - name: データチップ (収集アイテム) テスト
+        run: build/runner steel_chain.gba build/chips-out chips
+
       - name: ゲームオーバー/コンティニュー テスト
         run: build/runner steel_chain.gba build/gameover-out gameover
 

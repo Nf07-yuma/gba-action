@@ -785,6 +785,7 @@ OBJ_TYPES = {
     "x": 13,  # レーザー砲台 (左向き)
     "X": 13,  # レーザー砲台 (右向き)
     "u": 14,  # 爆撃ドローン
+    "*": 15,  # データチップ (収集アイテム, 1 ステージ 3 個)
 }
 OBJ_PARAMS = {"l": 32, "v": 32, "Z": 1, "X": 1}
 BACK_KINDS = {"p": 0, "w": 1, "g": 2, "b": 3}
@@ -1104,7 +1105,7 @@ def main():
           "#define CELL_BACK 4"]
     for k, v in OBJ_TYPES.items():
         pass
-    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD, OBJ_LIFT_H, OBJ_LIFT_V, OBJ_MINE, OBJ_LASER, OBJ_BOMBER };"]
+    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD, OBJ_LIFT_H, OBJ_LIFT_V, OBJ_MINE, OBJ_LASER, OBJ_BOMBER, OBJ_CHIP };"]
     level_dir = os.path.join(ASSETS, "levels")
     level_files = sorted(f for f in os.listdir(level_dir) if f.endswith(".txt"))
     lv_names = []
@@ -1116,6 +1117,14 @@ def main():
         lv_names.append((n, lv))
         C.append(f"static const u8 {n}_cells[{lv['w'] * lv['h']}] = {{\n{c_u8(lv['cells'])}\n}};")
         objs = sorted(lv["objs"], key=lambda o: o[2])
+        # データチップは左から順に番号 (param) を振る
+        chip_no = 0
+        for k, (t, prm, x, y) in enumerate(objs):
+            if t == 15:
+                objs[k] = (t, chip_no, x, y)
+                chip_no += 1
+        if chip_no > 8:
+            sys.exit(f"{fn}: データチップは 8 個まで")
         C.append(f"static const LevelObj {n}_objs[{max(1, len(objs))}] = {{")
         for (t, prm, x, y) in objs:
             C.append(f"    {{ {t}, {prm}, {x}, {y} }},")

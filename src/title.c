@@ -169,7 +169,7 @@ void title_update(void) {
         }
         text_put_center(10, game.easy ? "<  EASY   >" : game.hard ? "<  HARD   >" : "<  NORMAL >",
                         game.easy ? BGPAL_HUD_C : game.hard ? BGPAL_HUD_Y : BGPAL_HUD);
-        if (save_reached > 0 || save_rank[0]) {
+        if (save_reached > 0 || save_rank[0] || save_best_time[0] || save_chips[0]) {
             /* 開始ステージと、そのステージの最高ランク */
             char buf[24] = "STAGE 1 ^v BEST -";
             buf[6] = (char)('1' + title_cursor);
@@ -178,10 +178,20 @@ void title_update(void) {
             text_put_center(11, buf, title_cursor ? BGPAL_HUD_Y : BGPAL_HUD);
             /* そのステージのベストタイム */
             if (save_best_time[title_cursor]) {
-                text_put(10, 12, "TIME", BGPAL_HUD_C);
-                text_time(15, 12, save_best_time[title_cursor], BGPAL_HUD);
+                text_put(6, 12, "TIME", BGPAL_HUD_C);
+                text_time(11, 12, save_best_time[title_cursor], BGPAL_HUD);
             } else {
-                text_put(10, 12, "          ", BGPAL_HUD);
+                text_put(6, 12, "          ", BGPAL_HUD);
+            }
+            /* そのステージで集めたデータチップ */
+            {
+                const LevelDef* ld = &levels[title_cursor];
+                int total = 0;
+                for (int i = 0; i < ld->nobjs; i++) total += ld->objs[i].type == OBJ_CHIP;
+                char cb[10] = "CHIP 0/0";
+                cb[5] = (char)('0' + chip_count(save_chips[title_cursor]));
+                cb[7] = (char)('0' + total);
+                text_put(17, 12, cb, chip_count(save_chips[title_cursor]) >= total ? BGPAL_HUD_Y : BGPAL_HUD);
             }
         }
         text_put_center(13, (t >> 5) & 1 ? "PRESS START" : "           ", BGPAL_HUD_Y);

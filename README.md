@@ -17,7 +17,8 @@
 | ![難易度 HARD](docs/images/title_hard.png) | ![スタッフロール](docs/images/staffroll.png) |
 | ![爆撃ドローン](docs/images/bomber.png) | ![ボス登場の WARNING](docs/images/boss_warning.png) |
 | ![鋳造所の火の粉](docs/images/stage3_embers.png) | ![クリア画面とランク](docs/images/stage_clear.png) |
-| ![サウンドテスト](docs/images/soundtest.png) | ![スコアエクステンド 1UP](docs/images/extend_1up.png) |
+| ![データチップ](docs/images/chips.png) | ![サウンドテスト](docs/images/soundtest.png) |
+| ![スコアエクステンド 1UP](docs/images/extend_1up.png) | ![データチップの集計](docs/images/chips_clear.png) |
 
 （画像はすべて CI と同じヘッドレスランナーで実機ROMを動かして撮影したもの。`build/runner steel_chain.gba <出力先> demo1_0` で連番フレームを書き出せます）
 
@@ -54,6 +55,7 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 - **ランク評価とベストタイム**: ステージクリア時にタイム・最大 CHAIN・ミス回数・残り HP で S/A/B/C を判定。ステージ別の最高ランクとベストタイムを保存し、タイトルのステージ選択に表示
 - **爆撃ドローン**: 頭上から爆弾を落とす敵。爆弾は斬って消せる
 - **環境演出**: 鋳造所の火の粉、データハイウェイのデータ片、中枢コアの光の粒
+- **データチップ**: 各ステージに 3 個ずつ隠された収集アイテム（高台・足場の上・穴の上など）。取ると +1000 点、クリア時にセーブされ、タイトルのステージ選択に `CHIP 2/3` のように表示
 - **スコアエクステンド**: 20000 点で残機 +1、以降 40000 点ごとに +1（1UP! と表示）
 - **ステージ紹介に自己ベスト**: 一度クリアしたステージは、開始前の紹介画面にベストタイムと最高ランクを表示
 - **ノーダメージボーナス**: 被弾もミスもせずにステージをクリアすると +5000 点
@@ -93,6 +95,7 @@ build/runner steel_chain.gba build/s soundtest   # クリア後のサウンド�
 build/runner steel_chain.gba build/e extend      # スコアエクステンド (20000 / 60000 点で 1UP)
 build/runner steel_chain.gba build/p pausebgm    # ポーズメニューの BGM オン/オフ
 build/runner steel_chain.gba build/c settings    # 設定 (BGM・難易度) がリセット後も残るか
+build/runner steel_chain.gba build/k chips       # データチップの取得と SRAM への記録
 build/runner steel_chain.gba build/e boteasy     # EASY でボット通しプレイ (bothard で HARD)
 build/runner steel_chain.gba build/g gameover    # ゲームオーバー → コンティニュー / 放置でタイトル
 build/runner steel_chain.gba build/n nodamage    # ノーダメージボーナス

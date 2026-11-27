@@ -14,6 +14,17 @@ u8 save_clear_diff; /* クリアした難易度 bit0=EASY bit1=NORMAL bit2=HARD 
 u8 save_reached; /* 到達した最も先のステージ (0 始まり) */
 u8 save_rank[5];  /* ステージ別の最高ランク+1 (0=未記録, 1=C .. 4=S) */
 u16 save_best_time[5]; /* ステージ別のベストタイム (フレーム, 0=未記録) */
+u8 save_chips[5];      /* ステージ別に取ったデータチップ (bit) */
+
+/* データチップは別ブロック (オフセット 64〜): magic 'STK1' + u8 x 5 + チェックサム */
+#define CHIP_OFF 64
+#define CHIP_MAGIC 0x314B5453u
+
+int chip_count(u8 mask) {
+    int n = 0;
+    for (int i = 0; i < 8; i++) n += (mask >> i) & 1;
+    return n;
+}
 
 /* ベストタイムは別ブロック (オフセット 32〜): magic 'STT1' + u16 x 5 + チェックサム */
 #define TIME_OFF 32
@@ -34,6 +45,13 @@ void save_load(void) {
     save_reached = 0;
     for (int i = 0; i < 5; i++) save_rank[i] = 0;
     for (int i = 0; i < 5; i++) save_best_time[i] = 0;
+    for (int i = 0; i < 5; i++) save_chips[i] = 0;
+    if (rd32(CHIP_OFF) == CHIP_MAGIC) {
+        u8 sum = 0x5A, ch[5];
+        for (int i = 0; i < 5; i++) sum ^= ch[i] = SRAM[CHIP_OFF + 4 + i];
+        if (sum == SRAM[CHIP_OFF + 9])
+            for (int i = 0; i < 5; i++) save_chips[i] = ch[i];
+    }
     if (rd32(TIME_OFF) == TIME_MAGIC) {
         u32 sum = 0x5A5A5A5A;
         u16 tm[5];
@@ -99,6 +117,22 @@ int save_clear_difficulty(int d) {
     save_clear_diff |= bit;
     save_write();
     return 1;
+}
+
+/* ステージで取ったデータチップを記録。新しく取った数を返す */
+int save_chips_stage(int stage, u8 mask) {
+    if (stage < 0 || stage >= 5) return 0;
+    u8 add = (u8)(mask & ~save_chips[stage]);
+    if (!add) return 0;
+    save_chips[stage] |= add;
+    u8 sum = 0x5A;
+    for (int i = 0; i < 5; i++) {
+        SRAM[CHIP_OFF + 4 + i] = save_chips[i];
+        sum ^= save_chips[i];
+    }
+    SRAM[CHIP_OFF + 9] = sum;
+    wr32(CHIP_OFF, CHIP_MAGIC);
+    return chip_count(add);
 }
 
 /* 設定 (BGM オン/オフ・難易度) を保存 */
