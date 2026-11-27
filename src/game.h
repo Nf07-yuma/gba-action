@@ -306,6 +306,7 @@ typedef struct {
     u32 nodamage;     /* 直近のクリアがノーダメージなら 1 */
     u32 song;         /* 再生中の曲番号 (0xFF=停止) */
     u32 extends;      /* スコアで残機が増えた回数 */
+    u32 intro_best;   /* ステージ紹介に自己ベストを表示したら 1 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u
