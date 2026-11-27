@@ -53,6 +53,7 @@ GitHub Pages が有効なら、`https://<ユーザー名>.github.io/gba-action/`
 - **ランク評価とベストタイム**: ステージクリア時にタイム・最大 CHAIN・ミス回数・残り HP で S/A/B/C を判定。ステージ別の最高ランクとベストタイムを保存し、タイトルのステージ選択に表示
 - **爆撃ドローン**: 頭上から爆弾を落とす敵。爆弾は斬って消せる
 - **環境演出**: 鋳造所の火の粉、データハイウェイのデータ片、中枢コアの光の粒
+- **スコアエクステンド**: 20000 点で残機 +1、以降 40000 点ごとに +1（1UP! と表示）
 - **ノーダメージボーナス**: 被弾もミスもせずにステージをクリアすると +5000 点
 - **中間地点**: 柱の列を通過すると点灯 (飛び越しても OK)。画面上部に CHECKPOINT と表示
 - **コンティニュー**: ゲームオーバー後 10 秒のカウントダウン中に START で続きから
@@ -86,6 +87,7 @@ build/runner steel_chain.gba build/st4 stage4    # 指定ステージからボ�
 build/runner steel_chain.gba build/m music       # 全 BGM・効果音を WAV に録音
 build/runner steel_chain.gba build/a attract     # タイトル放置→デモプレイ
 build/runner steel_chain.gba build/s soundtest   # クリア後のサウンドテスト (L/R で曲送り)
+build/runner steel_chain.gba build/e extend      # スコアエクステンド (20000 / 60000 点で 1UP)
 build/runner steel_chain.gba build/e boteasy     # EASY でボット通しプレイ (bothard で HARD)
 build/runner steel_chain.gba build/g gameover    # ゲームオーバー → コンティニュー / 放置でタイトル
 build/runner steel_chain.gba build/n nodamage    # ノーダメージボーナス

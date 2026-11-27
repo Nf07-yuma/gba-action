@@ -184,6 +184,7 @@ void title_update(void) {
         game.stage = (u8)title_cursor;
         game.lives = START_LIVES;
         game.score = 0;
+        game.next_extend = EXTEND_FIRST;
         game.kills = 0;
         game.deaths = 0;
         game.chain_best = 0;
