@@ -17,6 +17,7 @@
 | ![難易度 HARD](docs/images/title_hard.png) | ![スタッフロール](docs/images/staffroll.png) |
 | ![爆撃ドローン](docs/images/bomber.png) | ![ボス登場の WARNING](docs/images/boss_warning.png) |
 | ![鋳造所の火の粉](docs/images/stage3_embers.png) | ![クリア画面とランク](docs/images/stage_clear.png) |
+| ![サウンドテスト](docs/images/soundtest.png) | ![スコアエクステンド 1UP](docs/images/extend_1up.png) |
 
 （画像はすべて CI と同じヘッドレスランナーで実機ROMを動かして撮影したもの。`build/runner steel_chain.gba <出力先> demo1_0` で連番フレームを書き出せます）
 
