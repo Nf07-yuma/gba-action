@@ -222,6 +222,7 @@ static void camera_clamp(void) {
     if (maxy < 0) maxy = 0;
     cam_x = CLAMP(cam_x, 0, maxx);
     if (boss_lock_x >= 0 && cam_x < boss_lock_x) cam_x = boss_lock_x;
+    if (arena_x >= 0) cam_x = arena_x; /* 敵ラッシュ中は画面固定 */
     cam_y = CLAMP(cam_y, 0, maxy);
 }
 

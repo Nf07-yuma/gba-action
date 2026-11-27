@@ -792,6 +792,7 @@ OBJ_TYPES = {
     "X": 13,  # レーザー砲台 (右向き)
     "u": 14,  # 爆撃ドローン
     "*": 15,  # データチップ (収集アイテム, 1 ステージ 3 個)
+    "!": 16,  # 敵ラッシュ (画面を固定して 3 波の敵を全滅させる)
 }
 OBJ_PARAMS = {"l": 32, "v": 32, "Z": 1, "X": 1}
 BACK_KINDS = {"p": 0, "w": 1, "g": 2, "b": 3}
@@ -1111,7 +1112,7 @@ def main():
           "#define CELL_BACK 4"]
     for k, v in OBJ_TYPES.items():
         pass
-    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD, OBJ_LIFT_H, OBJ_LIFT_V, OBJ_MINE, OBJ_LASER, OBJ_BOMBER, OBJ_CHIP };"]
+    H += ["enum { OBJ_NONE, OBJ_CRAWLER, OBJ_DRONE, OBJ_TURRET, OBJ_CHECKPOINT, OBJ_GOAL, OBJ_HEAL, OBJ_JUMPER, OBJ_BOSS, OBJ_SHIELD, OBJ_LIFT_H, OBJ_LIFT_V, OBJ_MINE, OBJ_LASER, OBJ_BOMBER, OBJ_CHIP, OBJ_ARENA };"]
     level_dir = os.path.join(ASSETS, "levels")
     level_files = sorted(f for f in os.listdir(level_dir) if f.endswith(".txt"))
     lv_names = []

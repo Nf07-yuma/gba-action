@@ -88,7 +88,7 @@ jobs:
         continue-on-error: true
         run: |
           for s in 1 2 3 4 5; do
-            build/runner steel_chain.gba build/stage$s-out stage$s | grep -E "stage end|death|このステージ" | tee -a build/stage-report.txt
+            build/runner steel_chain.gba build/stage$s-out stage$s | grep -E "stage end|death|このステージ|ラッシュ" | tee -a build/stage-report.txt
           done
 
       - name: ボット通しプレイ EASY (到達度レポート)

@@ -154,6 +154,7 @@ void items_draw(void);
 
 /* ---- boss.c ---- */
 extern s32 boss_lock_x;
+extern s32 arena_x; /* 敵ラッシュ中のカメラ固定位置 (-1 = なし) */
 void boss_reset(void);
 int boss_check_start(int spawn_cx, int spawn_cy, int param);
 /* core.c (最終ボス) */
@@ -323,6 +324,8 @@ typedef struct {
     u32 chips;        /* このステージで取ったデータチップ (bit) | 総数 << 8 */
     u32 run_chips;    /* エンディング: 今回集めた数 | 全体の総数 << 8 */
     u32 gold;         /* 全データチップ収集済み (自機が金色) なら 1 */
+    u32 arena;        /* 敵ラッシュ: 0=なし 1=開始 2=全滅させた */
+    u32 arenas_cleared; /* 敵ラッシュを突破した回数 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u
