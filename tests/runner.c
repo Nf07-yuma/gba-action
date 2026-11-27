@@ -70,6 +70,8 @@ typedef struct {
     uint32_t chips;
     uint32_t run_chips;
     uint32_t gold;
+    uint32_t arena;
+    uint32_t arenas_cleared;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -354,6 +356,15 @@ static void bot_step(int t, DebugInfo* prev, int* stuck) {
         keys = 0;
     } else if (d.state == GS_PLAY && d.boss_hp > 0) {
         keys = boss_keys(&d, prev, t);
+    } else if (d.state == GS_PLAY && d.arena == 1 && d.enemies > 0) {
+        /* 敵ラッシュ中: 画面中央付近で左右を向き直しながら斬り続ける (空中の敵には跳んで斬る) */
+        int cx = (int)d.cam_x + 120;
+        if (d.px < cx - 40) keys = KRIGHT;
+        else if (d.px > cx + 40) keys = KLEFT;
+        else keys = (t / 36) & 1 ? KLEFT : KRIGHT;
+        if (t % 8 < 2) keys |= KB;
+        if (t % 90 == 0 && d.on_ground) bot_jump_hold = 18;
+        if (bot_jump_hold > 0) { bot_jump_hold--; keys |= KA; }
     } else if (d.state == GS_PLAY) {
         keys |= KRIGHT;
         if (d.px == prev->px) (*stuck)++;
@@ -942,6 +953,8 @@ int main(int argc, char** argv) {
         DebugInfo prev = d;
         int stuck = 0;
         uint32_t clears0 = d.clears;
+        uint32_t arenas0 = d.arenas_cleared;
+        int arena_shot = 0;
         for (int t = 0; t < 60 * 300; t++) {
             bot_step(t, &prev, &stuck);
             if (t % 300 == 0 && t < 9000) {
@@ -949,6 +962,8 @@ int main(int argc, char** argv) {
                 snprintf(name, sizeof(name), "st_%03d", t / 300);
                 screenshot(name);
             }
+            if (prev.arena == 1 && arena_shot == 0) arena_shot = t + 200; /* 敵ラッシュ開始の少し後を撮影 */
+            if (arena_shot && t == arena_shot) screenshot("arena");
             if (prev.clears > clears0 || prev.state == GS_ENDING) break;
             if (getenv("LIFT_LOG") && t % 8 == 0 && prev.px > 560 && prev.px < 760)
                 printf("  [lift] vy=%d t=%d px=%d py=%d og=%u n=%u L0=(%d,%d) L1=(%d,%d)\n", prev.vy, t, prev.px, prev.py, prev.on_ground, prev.lift_count, prev.lifts[0], prev.lifts[1], prev.lifts[2], prev.lifts[3]);
@@ -956,6 +971,7 @@ int main(int argc, char** argv) {
         read_debug(&d);
         print_debug("stage end");
         check(d.clears > clears0 || d.state == GS_ENDING, "ボットがこのステージをクリアできる");
+        if (st == 1 || st == 3) check(d.arenas_cleared > arenas0, "敵ラッシュを突破できる (画面固定が解除される)");
         uint32_t tf = 0;
         if (d.clears > clears0) {
             run(60, 0);

@@ -15,6 +15,7 @@ typedef struct {
     u8 phase;      /* 足場の位相 (0-63) */
     u8 last_wave;  /* 最後に当たった斬撃波 */
     s16 obj;       /* レベルオブジェクト番号 (-1 = ドロップ品) */
+    u8 arena;      /* 敵ラッシュで出現した敵 */
 } Ent;
 
 #define MAX_ENTS 20
@@ -39,8 +40,20 @@ static int is_enemy(int type) {
            type == OBJ_MINE || type == OBJ_LASER || type == OBJ_BOMBER;
 }
 
+/* ---- 敵ラッシュ: 画面を固定し、3 波の敵を全滅させるまで進めない ---- */
+s32 arena_x = -1;          /* 固定中のカメラ位置 (-1 = なし) */
+static u8 arena_wave, arena_alive, arena_wait;
+static s32 arena_gy;       /* 地面の高さ (ピクセル) */
+static const u8 arena_waves[3][3] = {
+    {OBJ_CRAWLER, OBJ_DRONE, OBJ_CRAWLER},
+    {OBJ_JUMPER, OBJ_SHIELD, OBJ_DRONE},
+    {OBJ_BOMBER, OBJ_CRAWLER, OBJ_JUMPER},
+};
+
 void enemies_reset(int full) {
     memset(ents, 0, sizeof(ents));
+    arena_x = -1;
+    arena_wave = arena_alive = arena_wait = 0;
     standing_lift = -1;
     for (int i = 0; i < MAX_OBJS; i++) obj_flag[i] = full ? 0 : (obj_flag[i] & OF_LIT);
 }
@@ -138,6 +151,7 @@ void enemies_spawn_check(void) {
 }
 
 static void ent_free(Ent* e, int dead) {
+    if (e->arena && arena_alive) arena_alive--;
     if (e->obj >= 0) {
         obj_flag[e->obj] &= ~OF_SPAWNED;
         if (dead) obj_flag[e->obj] |= OF_DEAD;
@@ -501,6 +515,19 @@ static void update_prop(Ent* e) {
                 game_stage_clear();
         }
         break;
+    case OBJ_ARENA:
+        /* 敵ラッシュの開始地点: 通過したら画面を固定 */
+        if (arena_x < 0 && player.state != PS_DEAD && FROM_FP(player.b.x) + player.b.w / 2 >= px_center(e)) {
+            arena_x = CLAMP(px_center(e) - SCREEN_W / 2, 0, level.px_w - SCREEN_W);
+            arena_gy = FROM_FP(e->b.y) + e->b.h;
+            arena_wave = arena_alive = arena_wait = 0;
+            game_popup("ENEMY RUSH!");
+            sfx_play(SFX_ALARM);
+            g_debug.arena = 1;
+            ent_free(e, 1);
+            return;
+        }
+        break;
     case OBJ_CHIP:
         /* 浮いている収集アイテム: ときどき光って存在を知らせる。触れると取得 */
         if ((e->t % 48) == 0) fx_spawn(FX_SPARK, px_center(e) - 4 + rng_range(9) - 4, py_center(e) - 8 + rng_range(5), 0);
@@ -536,7 +563,47 @@ static void update_prop(Ent* e) {
     }
 }
 
+static void arena_update(void) {
+    if (arena_x < 0) return;
+    /* プレイヤーを画面内に閉じ込める */
+    int l = arena_x + 2, r = arena_x + SCREEN_W - 2 - player.b.w;
+    if (FROM_FP(player.b.x) < l) { player.b.x = TO_FP(l); if (player.b.vx < 0) player.b.vx = 0; }
+    if (FROM_FP(player.b.x) > r) { player.b.x = TO_FP(r); if (player.b.vx > 0) player.b.vx = 0; }
+    if (arena_alive) return;
+    if (++arena_wait < 50) return;
+    arena_wait = 0;
+    if (arena_wave >= 3) {
+        /* 全滅させた: 固定を解除してボーナス */
+        arena_x = -1;
+        game_popup("RUSH CLEAR! +3000");
+        game_add_score(3000);
+        sfx_play(SFX_CHECK);
+        g_debug.arena = 2;
+        g_debug.arenas_cleared++;
+        return;
+    }
+    /* 次の波: 地上の敵はプレイヤーから遠い側の端、空中の敵は上から */
+    int far_right = FROM_FP(player.b.x) < arena_x + SCREEN_W / 2;
+    for (int i = 0; i < 3; i++) {
+        int type = arena_waves[arena_wave][i];
+        int air = type == OBJ_DRONE || type == OBJ_BOMBER;
+        int x = far_right ? arena_x + SCREEN_W - 20 - i * 22 : arena_x + 20 + i * 22;
+        if (air) x = arena_x + SCREEN_W / 2 + (far_right ? 40 : -40);
+        Ent* e = ent_alloc();
+        if (!e) break;
+        ent_init(e, type, x, air ? arena_gy - 56 : arena_gy);
+        e->obj = -1;
+        e->arena = 1;
+        e->dir = far_right ? -1 : 1;
+        arena_alive++;
+        fx_spawn(FX_SPARK, x - 4, (air ? arena_gy - 64 : arena_gy - 16), 0);
+    }
+    sfx_play(SFX_SHOT);
+    arena_wave++;
+}
+
 void enemies_update(void) {
+    arena_update();
     int ax0, ay0, ax1, ay1, dmg, kbx, kby, stop;
     int atk = player_attack_box(&ax0, &ay0, &ax1, &ay1, &dmg, &kbx, &kby, &stop);
     for (int i = 0; i < MAX_ENTS; i++) {
