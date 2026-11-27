@@ -727,7 +727,7 @@ int main(int argc, char** argv) {
             core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 3);
             run(2, 0);
             audio_begin();
-            run(i >= 6 ? 240 : 900, 0);
+            run(i >= 6 && i <= 8 ? 240 : 900, 0);
             char nm[64];
             snprintf(nm, sizeof(nm), "song_%d_%s", i + 1, names[i]);
             double rms = audio_end(nm);
