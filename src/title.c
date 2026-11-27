@@ -113,7 +113,17 @@ void title_update(void) {
             text_num(4, 15, save_hiscore, 7, BGPAL_HUD);
             text_put(13, 15, "CHAIN", BGPAL_HUD_C);
             text_num(19, 15, save_best_chain, 3, BGPAL_HUD);
-            if (save_cleared) text_put(23, 15, "* CLEAR", BGPAL_HUD_Y);
+            if (save_clear_diff) {
+                /* クリアした難易度: CLR ENH (未クリアの難易度は -) */
+                text_put(23, 15, "CLR", BGPAL_HUD_Y);
+                for (int i = 0; i < 3; i++) {
+                    int on = save_clear_diff & (1 << i);
+                    char one[2] = {on ? "ENH"[i] : '-', 0};
+                    text_put(27 + i, 15, one, on ? BGPAL_HUD_Y : BGPAL_HUD);
+                }
+            } else if (save_cleared) {
+                text_put(23, 15, "* CLEAR", BGPAL_HUD_Y);
+            }
         }
         text_put_center(17, "B:SLASH  A:JUMP  R:DASH", BGPAL_HUD_C);
         text_put_center(19, "(C) 2026 STEEL CHAIN PROJECT", BGPAL_HUD);

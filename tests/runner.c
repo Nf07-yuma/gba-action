@@ -1018,6 +1018,9 @@ int main(int argc, char** argv) {
             uint32_t reached = core->busRead8(core, 0x0E00000D);
             printf("  SRAM: 到達ステージ=%u\n", reached + 1);
             check(reached == 4, "到達ステージ (ステージセレクト用) が SRAM に保存される");
+            uint32_t clw = core->busRead8(core, 0x0E00000C);
+            printf("  SRAM: クリアした難易度 bits=%u\n", (clw >> 4) & 7);
+            check(((clw >> 4) & 7) == 2, "クリアした難易度 (NORMAL) が SRAM に記録される");
             /* スタッフロール: START で開始 → A 長押しで早送り → THE END → START でタイトル */
             run(130, 0);
             run(2, KSTART);

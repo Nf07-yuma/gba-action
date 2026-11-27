@@ -78,16 +78,22 @@ void ending_update(void) {
         music_play(SONG_ENDING);
         text_put_center(2, "MISSION COMPLETE", BGPAL_HUD_Y);
         if (save_record(game.score, game.chain_best, 1)) text_put_center(17, "NEW RECORD!", BGPAL_HUD_Y);
+        int diff = game.easy ? 0 : game.hard ? 2 : 1;
+        save_clear_difficulty(diff);
         text_put_center(4, "THE CORE IS SILENT.", BGPAL_HUD);
         text_put_center(5, "STEEL RETURNS HOME.", BGPAL_HUD);
         text_put(6, 7, "SCORE", BGPAL_HUD_C);
         text_num(17, 7, game.score, 7, BGPAL_HUD);
-        text_put(6, 9, "BEST CHAIN", BGPAL_HUD_C);
-        text_num(21, 9, game.chain_best, 3, BGPAL_HUD);
-        text_put(6, 11, "DESTROYED", BGPAL_HUD_C);
-        text_num(21, 11, game.kills, 3, BGPAL_HUD);
-        text_put(6, 13, "TOTAL TIME", BGPAL_HUD_C);
-        text_time(19, 13, game.total_time, BGPAL_HUD);
+        text_put(6, 8, "BEST CHAIN", BGPAL_HUD_C);
+        text_num(21, 8, game.chain_best, 3, BGPAL_HUD);
+        text_put(6, 9, "DESTROYED", BGPAL_HUD_C);
+        text_num(21, 9, game.kills, 3, BGPAL_HUD);
+        text_put(6, 10, "MISSES", BGPAL_HUD_C);
+        text_num(21, 10, game.deaths, 3, BGPAL_HUD);
+        text_put(6, 11, "TOTAL TIME", BGPAL_HUD_C);
+        text_time(19, 11, game.total_time, BGPAL_HUD);
+        text_put(6, 13, "DIFFICULTY", BGPAL_HUD_C);
+        text_put(18, 13, diff == 0 ? "  EASY" : diff == 2 ? "  HARD" : "NORMAL", diff == 2 ? BGPAL_HUD_Y : BGPAL_HUD);
         /* ステージ別ランク (今回のプレイ) */
         text_put(6, 15, "RANKS", BGPAL_HUD_C);
         for (int i = 0; i < 5; i++) {

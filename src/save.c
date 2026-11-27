@@ -10,6 +10,7 @@ __attribute__((used, aligned(4))) const char save_type_id[] = "SRAM_V113";
 u32 save_hiscore;
 u16 save_best_chain;
 u8 save_cleared;
+u8 save_clear_diff; /* クリアした難易度 bit0=EASY bit1=NORMAL bit2=HARD */
 u8 save_reached; /* 到達した最も先のステージ (0 始まり) */
 u8 save_rank[5];  /* ステージ別の最高ランク+1 (0=未記録, 1=C .. 4=S) */
 u16 save_best_time[5]; /* ステージ別のベストタイム (フレーム, 0=未記録) */
@@ -29,6 +30,7 @@ void save_load(void) {
     save_hiscore = 0;
     save_best_chain = 0;
     save_cleared = 0;
+    save_clear_diff = 0;
     save_reached = 0;
     for (int i = 0; i < 5; i++) save_rank[i] = 0;
     for (int i = 0; i < 5; i++) save_best_time[i] = 0;
@@ -52,6 +54,7 @@ void save_load(void) {
     bgm_mute = (u8)((cl >> 1) & 1);
     game.easy = (u8)(((cl >> 2) & 3) == 1);
     game.hard = (u8)(((cl >> 2) & 3) == 2);
+    save_clear_diff = (u8)((cl >> 4) & 7); /* bit4-6 */
     save_reached = (u8)MIN(4u, (cl >> 8) & 0xFF);
     for (int i = 0; i < 5; i++) save_rank[i] = (u8)MIN(4u, (cl >> (16 + i * 3)) & 7);
 }
@@ -60,6 +63,7 @@ static void save_write(void) {
     u32 ch = save_best_chain, cl = save_cleared | ((u32)save_reached << 8);
     cl |= (u32)(bgm_mute & 1) << 1;
     cl |= (u32)(game.easy ? 1 : game.hard ? 2 : 0) << 2;
+    cl |= (u32)(save_clear_diff & 7) << 4;
     /* bit16- : ステージ別ランク (3bit x 5) */
     for (int i = 0; i < 5; i++) cl |= (u32)save_rank[i] << (16 + i * 3);
     wr32(4, save_hiscore);
@@ -86,6 +90,15 @@ int save_record(u32 score, u16 chain, int cleared) {
     }
     if (upd) save_write();
     return upd;
+}
+
+/* クリアした難易度を記録 (0=EASY 1=NORMAL 2=HARD)。初めてなら 1 */
+int save_clear_difficulty(int d) {
+    u8 bit = (u8)(1 << d);
+    if (save_clear_diff & bit) return 0;
+    save_clear_diff |= bit;
+    save_write();
+    return 1;
 }
 
 /* 設定 (BGM オン/オフ・難易度) を保存 */
