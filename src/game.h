@@ -254,6 +254,7 @@ void sound_init(void);
 void sfx_play(int id);
 void sound_update(void);
 void music_play(int id);
+int music_current(void); /* 再生中の曲番号 (停止中は -1) */
 void music_stop(void);
 void music_pause(int on);
 
@@ -280,7 +281,7 @@ typedef struct {
     s32 boss_hp;
     u32 boss_state;
     s32 boss_x;
-    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg), 3=曲再生(arg), 4=効果音(arg), 5=ゲームオーバーにする */
+    u32 cmd;      /* テストランナーからの命令: 1=ステージ移動(arg), 2=X座標へワープ(arg), 3=曲再生(arg), 4=効果音(arg), 5=ゲームオーバーにする, 6=クリア済みにする */
     u32 cmd_arg;
     u32 lift_count;
     s32 lifts[8]; /* x,y x4 */
@@ -299,6 +300,7 @@ typedef struct {
     u32 combo;        /* 攻撃中の段 (0-2 地上, 3 空中, 4 ダッシュ斬り) | 攻撃中フラグ 0x100 */
     u32 checkpoints;  /* 通過した中間地点の数 */
     u32 nodamage;     /* 直近のクリアがノーダメージなら 1 */
+    u32 song;         /* 再生中の曲番号 (0xFF=停止) */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u

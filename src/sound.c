@@ -67,6 +67,8 @@ void music_play(int id) {
     paused = 0;
 }
 
+int music_current(void) { return song ? (int)(song - songs) : -1; }
+
 void music_stop(void) {
     song = 0;
     REG_SOUND2CNT_L = 0;

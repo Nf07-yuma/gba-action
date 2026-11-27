@@ -454,6 +454,7 @@ static void gameover_update(void) {
 /* テスト用デバッグ情報 (EWRAM 先頭の DebugInfo) を更新 */
 static void debug_publish(void) {
     g_debug.frame = game.frame;
+    g_debug.song = (u32)(music_current() & 0xFF);
     g_debug.state = game.state;
     g_debug.stage = game.stage;
     g_debug.px = FROM_FP(player.b.x);
@@ -544,6 +545,11 @@ int main(void) {
             /* テスト用: 残機 0 にしてミス (ゲームオーバー画面へ) */
             game.lives = 0;
             player_kill();
+            g_debug.cmd = 0;
+        } else if (g_debug.cmd == 6) {
+            /* テスト用: クリア済みにする (セーブはしない)。タイトルを描き直す */
+            save_cleared = 1;
+            if (game.state == GS_TITLE) game.state_t = 0;
             g_debug.cmd = 0;
         } else if (g_debug.cmd == 4) {
             music_stop();
