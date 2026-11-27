@@ -599,6 +599,11 @@ static void arena_update(void) {
         fx_spawn(FX_SPARK, x - 4, (air ? arena_gy - 64 : arena_gy - 16), 0);
     }
     sfx_play(SFX_SHOT);
+    {
+        char msg[12] = "WAVE 1/3";
+        msg[5] = (char)('1' + arena_wave);
+        game_popup(msg);
+    }
     arena_wave++;
 }
 

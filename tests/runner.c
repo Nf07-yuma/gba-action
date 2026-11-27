@@ -964,6 +964,7 @@ int main(int argc, char** argv) {
             }
             if (prev.arena == 1 && arena_shot == 0) arena_shot = t + 200; /* 敵ラッシュ開始の少し後を撮影 */
             if (arena_shot && t == arena_shot) screenshot("arena");
+            if (arena_shot && t == arena_shot - 140) screenshot("arena_wave1"); /* WAVE 1/3 の表示 */
             if (prev.clears > clears0 || prev.state == GS_ENDING) break;
             if (getenv("LIFT_LOG") && t % 8 == 0 && prev.px > 560 && prev.px < 760)
                 printf("  [lift] vy=%d t=%d px=%d py=%d og=%u n=%u L0=(%d,%d) L1=(%d,%d)\n", prev.vy, t, prev.px, prev.py, prev.on_ground, prev.lift_count, prev.lifts[0], prev.lifts[1], prev.lifts[2], prev.lifts[3]);
