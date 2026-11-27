@@ -222,7 +222,7 @@ static void intro_update(void) {
         stage_begin(0);
         if (!game.demo) save_reach_stage(game.stage);
         {
-            static const u8 stage_song[] = {SONG_STAGE, SONG_STAGE2, SONG_FOUNDRY, SONG_STAGE2, SONG_FINAL};
+            static const u8 stage_song[] = {SONG_STAGE, SONG_STAGE2, SONG_FOUNDRY, SONG_SKYWAY, SONG_FINAL};
             music_play(stage_song[game.stage < 5 ? game.stage : 0]);
         }
         char buf[16] = "STAGE 1";
