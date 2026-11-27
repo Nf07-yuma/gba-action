@@ -242,6 +242,18 @@ static void intro_update(void) {
         buf[6] = (char)('1' + game.stage);
         text_put_center(7, buf, BGPAL_HUD_Y);
         text_put_center(9, level.def->name, BGPAL_HUD);
+        /* このステージの自己ベスト (タイムと最高ランク) */
+        if (!game.demo && game.stage < 5 && (save_best_time[game.stage] || save_rank[game.stage])) {
+            text_put(6, 10, "BEST --:--  RANK -", BGPAL_HUD_C);
+            if (save_best_time[game.stage]) text_time(11, 10, save_best_time[game.stage], BGPAL_HUD);
+            if (save_rank[game.stage]) {
+                char r[2] = {"CBAS"[save_rank[game.stage] - 1], 0};
+                text_put(23, 10, r, BGPAL_HUD_Y);
+            }
+            g_debug.intro_best = 1;
+        } else {
+            g_debug.intro_best = 0;
+        }
         text_put_center(12, "READY", BGPAL_HUD_C);
         text_fill(0, 14, 30, 5, HUD_TILE_SOLID_DARK, BGPAL_HUD);
     }

@@ -65,6 +65,7 @@ typedef struct {
     uint32_t nodamage;
     uint32_t song;
     uint32_t extends;
+    uint32_t intro_best;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -587,6 +588,14 @@ int main(int argc, char** argv) {
         read_debug(&d);
         screenshot("nodamage_clear");
         check(d.state == GS_CLEAR && d.nodamage == 1, "ノーダメージでクリアすると NO DAMAGE ボーナスが出る");
+        /* もう一度ステージ1 へ: 紹介画面に自己ベスト (タイム・ランク) が出る */
+        run(120, 0); /* クリア画面のランク表示 (保存) まで待つ */
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd_arg), 0);
+        core->busWrite32(core, 0x02000000 + offsetof(DebugInfo, cmd), 1);
+        run(40, 0);
+        read_debug(&d);
+        screenshot("intro_best");
+        check(d.state == GS_STAGE_INTRO && d.intro_best == 1, "クリア済みステージの紹介画面に自己ベストが出る");
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }
