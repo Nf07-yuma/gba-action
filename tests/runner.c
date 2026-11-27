@@ -66,6 +66,7 @@ typedef struct {
     uint32_t song;
     uint32_t extends;
     uint32_t intro_best;
+    uint32_t bgm_mute;
 } DebugInfo;
 
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
@@ -567,6 +568,40 @@ int main(int argc, char** argv) {
         run(10, 0);
         read_debug(&d);
         check(d.lives == lives0 + 2 && d.extends == 2, "60000 点で 2 回目のエクステンド");
+        printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
+        return failures ? 1 : 0;
+    }
+    if (strcmp(scenario, "pausebgm") == 0) {
+        /* ポーズメニューの BGM オン/オフ */
+        run(2, KSTART);
+        run(40, 0);
+        wait_state(GS_PLAY, 400);
+        run(30, 0);
+        audio_begin();
+        run(120, 0);
+        double rms_on = audio_end("pausebgm_on");
+        run(2, KSTART); run(6, 0);
+        for (int i = 0; i < 3; i++) { run(2, KDOWN); run(4, 0); }
+        run(2, KA); run(6, 0);
+        read_debug(&d);
+        screenshot("pausebgm_menu");
+        check(d.state == GS_PAUSE && d.bgm_mute == 1, "ポーズメニューで BGM をオフにできる");
+        run(2, KSTART); run(30, 0);
+        read_debug(&d);
+        check(d.state == GS_PLAY, "START でゲームに戻る");
+        audio_begin();
+        run(120, 0);
+        double rms_off = audio_end("pausebgm_off");
+        check(rms_off < rms_on * 0.3, "BGM オフの間は音がほぼ鳴らない (棒立ちで効果音なし)");
+        run(2, KSTART); run(6, 0);
+        run(2, KUP); run(4, 0); /* 先頭から上で最後の項目 (BGM) へ */
+        run(2, KRIGHT); run(6, 0);
+        read_debug(&d);
+        check(d.bgm_mute == 0, "もう一度選ぶと BGM がオンに戻る");
+        run(2, KSTART); run(30, 0);
+        audio_begin();
+        run(120, 0);
+        check(audio_end("pausebgm_on2") > rms_on * 0.5, "BGM オンに戻すとまた鳴る");
         printf("== %s: %d failure(s), %u frames ==\n", failures ? "FAILED" : "PASSED", failures, frames_run);
         return failures ? 1 : 0;
     }

@@ -8,6 +8,7 @@ static const Song* song;
 static u16 pos_lead, pos_bass, pos_drum;
 static u8 tick;
 static u8 paused;
+u8 bgm_mute;           /* BGM オフ (効果音は鳴る) */
 
 /* ベース用波形 (32 サンプル, 4bit): 丸みのあるノコギリ波 */
 static const u32 bass_wave[4] = {0x89ABCDEF, 0xFEDCBA98, 0x77665544, 0x33221100};
@@ -85,7 +86,17 @@ void music_pause(int on) {
     }
 }
 
+void music_set_mute(int on) {
+    bgm_mute = (u8)on;
+    if (on) {
+        REG_SOUND2CNT_L = 0;
+        REG_SOUND2CNT_H = 0x8000;
+        REG_SOUND3CNT_L = 0;
+    }
+}
+
 static void play_step(void) {
+    if (bgm_mute) goto advance;
     u8 n = song->lead[pos_lead];
     if (n == MUS_OFF) {
         REG_SOUND2CNT_L = 0;
@@ -110,6 +121,7 @@ static void play_step(void) {
         case 3: noise(0x4100, 0x0008); break; /* ハイハット */
         }
     }
+advance:
     if (!song->loop && pos_lead + 1 >= song->lead_len) {
         /* ジングルは最後まで鳴らしたら止める */
         song = 0;

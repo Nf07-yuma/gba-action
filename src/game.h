@@ -258,6 +258,8 @@ void sound_init(void);
 void sfx_play(int id);
 void sound_update(void);
 void music_play(int id);
+extern u8 bgm_mute;
+void music_set_mute(int on); /* BGM のオン/オフ (ポーズメニュー) */
 int music_current(void); /* 再生中の曲番号 (停止中は -1) */
 void music_stop(void);
 void music_pause(int on);
@@ -307,6 +309,7 @@ typedef struct {
     u32 song;         /* 再生中の曲番号 (0xFF=停止) */
     u32 extends;      /* スコアで残機が増えた回数 */
     u32 intro_best;   /* ステージ紹介に自己ベストを表示したら 1 */
+    u32 bgm_mute;     /* BGM オフなら 1 */
 } DebugInfo;
 extern volatile DebugInfo g_debug;
 #define DEBUG_MAGIC 0x48435453u
